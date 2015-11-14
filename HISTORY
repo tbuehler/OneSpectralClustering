@@ -1,0 +1,12 @@
+1-SPECTRAL CLUSTERING - Version history
+---------------------------------------
+
+V1.0: 
+- initial release
+
+V1.1: 
+- fixed bug occuring when input graph is disconnected
+- reduced memory usage when input graph has large number of disconnected components
+- more user-friendly usage of main method OneSpectralClustering
+- faster computation of eigenvector initialization + now thresholded according to multicut-criterion
+- several internal optimizations
