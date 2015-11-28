@@ -118,7 +118,7 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
                 % don't threshold within regions of same value
 
                 %[vminU,indexU]=unique(vmin_sorted(1:end-1));% unique gives index of last occurence
-                [vminU,indexU]=unique(vmin_sorted);% unique gives index of last occurence
+                [vminU,indexU]=unique(vmin_sorted,'last');% unique gives index of last occurence
                 vminU=vminU(1:end-1); indexU=indexU(1:end-1); 
 
                 % find best cut/cheeger

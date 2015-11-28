@@ -425,7 +425,7 @@ function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_c
         end
         
         [vminM_sorted, index]=sort(vmin_comp);
-        [vminU,indexU]=unique(vminM_sorted);
+        [vminU,indexU]=unique(vminM_sorted,'last');
         
         
         W_sorted=W_comp(index,index);

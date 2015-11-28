@@ -11,7 +11,7 @@ function [c,index] =  weighted_median(f,deg)
     cumdeg = cumsum(deg(ix));
     totdeg = cumdeg(end);
 
-    [f_unique, ix2] = unique(sf); % ix2 gives index of last occurence
+    [f_unique, ix2] = unique(sf,'last'); % ix2 gives index of last occurence
     cumdeg_unique=cumdeg(ix2);
     cumdeg_unique_shifted=[0;cumdeg_unique(1:end-1)];
     deg_unique= cumdeg_unique - cumdeg_unique_shifted;
