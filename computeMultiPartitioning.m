@@ -6,25 +6,25 @@ function [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,init
 %           = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,criterion_threshold,criterion_multicluster,verbosity)
 %
 % Input:
-%   W: Sparse weight matrix. Has to be symmetric.
-%   normalized: true for Ncut/NCC, false for Rcut/RCC
-%   k: number of clusters
-%   init2nd: true if you want to perform one initialization with the thresholded
-%   second eigenvector of the standard graph Laplacian.
-%   numTrials: number of additional runs with different random 
-%   initializations at each level
-%   criterion_threshold: 1: Rcut/Ncut, 2: RCC/NCC
-%   criterion_multicluster: 1: Rcut/Ncut, 2: RCC/NCC
-%   verbosity: Controls how much information is displayed. Levels 0-3,
-%   default is 2.
+%   W                       - Sparse weight matrix. Has to be symmetric.
+%   normalized              - true for Ncut/NCC, false for Rcut/RCC
+%   k                       - number of clusters
+%   init2nd     			- true for one initialization with the thresholded 2nd 
+%                             eigenvector of the standard graph Laplacian.
+%   numTrials   		    - number of additional runs with different random 
+%                 			  initializations at each level
+%   criterion_threshold     - 1: Rcut/Ncut, 2: RCC/NCC
+%   criterion_multicluster  - 1: Rcut/Ncut, 2: RCC/NCC
+%   verbosity               - Controls how much information is displayed. Levels 0-3,
+%                             default is 2.
 %
 % Output:
-%   clusters: mx(k-1) matrix containing in each column the computed 
-%   clustering for each partitioning step.
-%   cuts: (k-1)x1 vector containing the Ratio/Normalized Cut values after 
-%   each partitioning step.
-%   cheegers: (k-1)x1 vector containing the Ratio/Normalized Cheeger Cut 
-%   values after each partitioning step.
+%   clusters    - mx(k-1) matrix containing in each column the computed 
+%                 clustering for each partitioning step.
+%   cuts        - (k-1)x1 vector containing the Rcut/Ncut values after 
+%                 each partitioning step.
+%   cheegers    - (k-1)x1 vector containing the RCC/NCC values after each 
+%                 partitioning step.
 %
 % (C)2010-11 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany

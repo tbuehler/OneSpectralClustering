@@ -1,7 +1,7 @@
 function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter,numInner,verbosity)
 % Performs 1-Spectral Clustering as described in the paper
 %
-% M. Hein and T. Bühler
+% M. Hein and T. BÃ¼hler
 % An Inverse Power Method for Nonlinear Eigenproblems with Applications in 1-Spectral Clustering and Sparse PCA
 % In Advances in Neural Information Processing Systems 23 (NIPS 2010)
 % Available online at http://arxiv.org/abs/1012.0774
@@ -13,14 +13,31 @@ function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter
 %    [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter,numInner,verbosity);
 %
 % Input: 
-%   W: Sparse weight matrix. Has to be symmetric.
-%   criterion: The multipartition criterion to be optimized. Available
-%   choices are
-%               'ncut' - Normalized Cut, 
-%               'ncc' - Normalized Cheeger Cut,
-%               'rcut' - Ratio Cut, 
-%               'rcc' - Ratio Cheeger Cut
-%   k: number of clusters
+%   W           - Sparse weight matrix. Has to be symmetric.
+%   criterion   - The multipartition criterion to be optimized. Available
+%                 choices are
+%                   'ncut' - Normalized Cut, 
+%                   'ncc' - Normalized Cheeger Cut,
+%                   'rcut' - Ratio Cut, 
+%                   'rcc' - Ratio Cheeger Cut
+%   k           - number of clusters
+%
+% Input(optional):
+%   numOuter    - number of additional times the multipartitioning scheme
+%                 is performed (default is 0); 
+%   numInner    - for the additional runs of the multipartitioning scheme: 
+%                 number of random initializations at each level (default is 0).
+%   verbosity   - Controls how much information is displayed. Levels 0-3,
+%                 default is 2.
+%
+% Output:
+%   clusters    - mx(k-1) matrix containing in each column the computed
+%                 clustering for each partitioning step.
+%   cuts        - (k-1)x1 vector containing the Ratio/Normalized Cut values 
+%                 after each partitioning step.
+%   cheegers    - (k-1)x1 vector containing the Ratio/Normalized Cheeger 
+%                 Cut values after each partitioning step.
+%
 %
 % If no additional parameters are specified, the multipartitioning scheme
 % is performed once, where each subpartitioning problem is initialized with
@@ -29,22 +46,6 @@ function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter
 % The quality of the obtained partitioning can be improved by performing 
 % additional runs of the multipartitioning scheme (parameter numOuter)
 % with multiple random initializations at each level (parameter numInner).
-%
-% Input(optional):
-%   numOuter: number of additional times the multipartitioning scheme is 
-%   performed (default is 0); 
-%   numInner: for the additional runs of the multipartitioning scheme: 
-%   number of random initializations at each level (default is 0).
-%   verbosity: Controls how much information is displayed. Levels 0-3,
-%   default is 2.
-%
-% Output:
-%   clusters: mx(k-1) matrix containing in each column the computed
-%   clustering for each partitioning step.
-%   cuts: (k-1)x1 vector containing the Ratio/Normalized Cut values after 
-%   each partitioning step.
-%   cheegers: (k-1)x1 vector containing the Ratio/Normalized Cheeger Cut 
-%   values after each partitioning step.
 %
 % The final clustering is obtained via clusters(:,end), the corresponding 
 % cut/cheeger values via cuts(end), cheegers(end).

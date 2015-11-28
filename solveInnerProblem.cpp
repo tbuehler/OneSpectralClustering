@@ -1,10 +1,14 @@
 // Solves the inner problem in the nonlinear inverse power method 
 // for nonconstant eigenvectors of the graph 1-Laplacian.
 //
-// (C)2010 Matthias Hein and Thomas Buehler 
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Copyright 2010-15 Thomas Bühler and Matthias Hein
 // Machine Learning Group, Saarland University, Germany
 // http://www.ml.uni-saarland.de
-
 #include <math.h>
 #include "mex.h"
 #include "matrix.h"

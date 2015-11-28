@@ -4,6 +4,12 @@ function [cut,cheeger,cutParts]= computeMultiCut(W,allClusters,normalized)
 %
 % Usage: [cut,cheeger,cutParts]= computeMultiCut(W,allClusters,normalized)
 %
+%
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
 % (C)2010-11 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de

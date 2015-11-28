@@ -5,28 +5,33 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
 %			= createClusters(vmin,W,normalized,threshold_type,criterion)
 %
 % Input:
-%   vmin: The eigenvector.
-%   W: Weight matrix.
-%   normalized: True for Ncut/NCC, false for Rcut/RCC.
-%   threshold_type: 0: zero, 1: median, 2: mean, -1: best
-%   criterion: thresholding criterion. 1: Ratio/Normalized Cut 
-%   2: Ratio/Normalized Cheeger Cut
+%   vmin        - The eigenvector.
+%   W           - Weight matrix.
+%   normalized  - True for Ncut/NCC, false for Rcut/RCC.
+%   threshold_type - 0: zero, 1: median, 2: mean, -1: best
+%   criterion   - thresholding criterion. 1: Ratio/Normalized Cut 
+%                 2: Ratio/Normalized Cheeger Cut
 %
-%   (optional) deg: Degrees of vertices as column vector. Default is 
-%   sum(W,2) in normalized case and ones(size(W,1),1) in unnormalized
-%   case. Will be ignored if normalized=false.
-%   (optional) notinsideregion=true: don't consider cheeger cuts where you 
-%   threshold inside of a region of same value. default is false.
+%   deg         - Degrees of vertices as column vector. Default is 
+%                 sum(W,2) in normalized case and ones(size(W,1),1) in 
+%                 unnormalized case. Will be ignored if normalized=false.
+%   notinsideregion   - true: don't consider cheeger cuts where you threshold 
+%                 inside of a region of same value. default is false.
 %
 % Output:
-%   allClusters: Obtained clustering after thresholding.
-%   cut: Value of the Normalized/Ratio Cut.
-%   cheeger: Value of the Normalized/Ratio Cheeger Cut.
-%   cutpart1,cutpart2: The two components of Ratio/Normalized Cut and 
-%   Ratio/Normalized Cheeger Cut.
-%   threshold: The threshold used to obtain the partitioning.
+%   allClusters - Obtained clustering after thresholding.
+%   cut         - Value of the Normalized/Ratio Cut.
+%   cheeger     - Value of the Normalized/Ratio Cheeger Cut.
+%   cutpart1/2  - The two components of Ratio/Normalized Cut and 
+%                 Ratio/Normalized Cheeger Cut.
+%   threshold   - The threshold used to obtain the partitioning.
+% 
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
 %
-% (C)2010-11 Thomas Buehler and Matthias Hein
+% Copyright 2010-15 Thomas Bühler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 	

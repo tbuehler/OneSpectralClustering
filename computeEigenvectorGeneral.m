@@ -7,18 +7,24 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
 %   computeEigenvectorGeneral(W,fold,normalized,verbose,deg)
 %
 % Input:
-%   W: Sparse symmetric weight matrix.
-%   fold: Start vector. Use multiple runs with random initialization.
-%   normalized: True/false for normalized/unnormalized 1-spectral clustering.
-%   (Optional:) deg: Degrees of vertices as column vector. Default
-%   is full(sum(W,2)) in normalized case and ones(size(W,1),1) in 
-%   unnormalized case. Will be ignored if normalized=false.
+%   W           - Sparse symmetric weight matrix.
+%   fold        - Start vector. Use multiple runs with random initialization.
+%   normalized  - True/false for normalized/unnormalized 1-spectral clustering.
+%
+%   deg         - Degrees of vertices as column vector. Default is 
+%                 full(sum(W,2)) in normalized case and ones(size(W,1),1) 
+%                 in unnormalized case. Will be ignored if normalized=false.
 %
 % Output:
-%	fold: Final eigenvector.
-%   FctValOuter: Values of the functional in each iteration.
+%	fold        - Final eigenvector.
+%   FctValOuter - Values of the functional in each iteration.
 %
-% (C)2010-11 Matthias Hein and Thomas Buehler
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.%
+%
+% Copyright 2010-15 Thomas Bühler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
