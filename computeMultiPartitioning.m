@@ -47,7 +47,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
     assert((crit_thresh==1 || crit_thresh==2) && (crit_multi==1 || crit_multi==2), 'Wrong usage. Unknown clustering criterion. Available clustering criteria are 1: Ncut/Rcut, 2: NCC/RCC.');
     assert(init2nd || numTrials>0, 'Wrong usage. If second eigenvector initialization is turned off, numTrials has to be positive.');
     
-  	threshold_type = -1; 
+    threshold_type = -1; 
 
     clusters=zeros(num,k-1);
     cuts=zeros(1,k-1);
@@ -78,16 +78,15 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             if(verbosity>=2) disp('...Computing second eigenvector of standard graph Laplacian.'); end
             [start,flag]=computeStandardEigenvector(W,normalized,deg,verbosity);
             if(flag) % if eigenvector computation succeeded
-                start = createClustersGeneral(start,W,normalized,threshold_type,crit_thresh,deg2,true);
+                start = createClustersGeneral(start,W,normalized,threshold_type,crit_thresh,deg2,false);
                 if (sum(start)>sum(start==0)) start=1-start; end
                 start=start/sum(start);
     
-
                 % Computing partitioning initialized with second eigenvector.
                 if(verbosity>=2) disp(['...Computing nonlinear eigenvector of graph 1-Laplacian. ',...
                     'Initialization with second eigenvector of standard graph Laplacian.']);  end
                 [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
-                [allClusters, cut,cheeger,cutPart1,cutPart2] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,true);
+                [allClusters, cut,cheeger,cutPart1,cutPart2] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,false);
 
                 % Display current objective
                 if(verbosity>=2) displayCurrentObjective(cut,cheeger,normalized); end
@@ -105,7 +104,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             if(verbosity>=2) fprintf('...Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d.\n',l,numTrials); end
             start=randn(num,1);
             [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
-            [allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,true);
+            [allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,false);
 
             % Display current objective
             if(verbosity>=2) displayCurrentObjective(cut_temp,cheeger_temp,normalized); end
@@ -116,7 +115,6 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             end
         end
     end
-    
     
     if (cut==inf)
         error('OneSpect:cutinf','Clustering initialized with second eigenvector of standard graph Laplacian failed at first level');
@@ -146,12 +144,11 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
         bestCheeger=inf;
         % in each step consider each of the current l-1 clusters
         for m=1:l-1
-
             index_m=find(allClusters==m);
             
             % if we have already solved this subproblem	
             if (~isempty(subClusters{m}))
-				allClustersInCluster_m = subClusters{m};
+                allClustersInCluster_m = subClusters{m};
                 cutPart1 = subCutParts(m,1);
                 cutPart2 = subCutParts(m,2);
             % if the current cluster has size 1 it cannot be further divided
@@ -299,14 +296,12 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                                     assert(length(allClustersInCluster_m)==length(index_m));
                                 end
                             end
-
                         end
-
                     end
                 end
                 % store current best partition
-			    subClusters{m}=allClustersInCluster_m;
-				subCutParts(m,1:2)=[cutPart1 cutPart2]; 
+                subClusters{m}=allClustersInCluster_m;
+                subCutParts(m,1:2)=[cutPart1 cutPart2]; 
    
             end
             
@@ -318,7 +313,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                 fprintf('\n');
             end
             
-			% check if partitoning of the current subgraph gives better cut
+            % check if partitoning of the current subgraph gives better cut
             if (crit_multi==1 && cut<bestCut) || (crit_multi==2 && cheeger<bestCheeger)
                 [bestCut,bestCheeger,bestCutPart1,bestCutPart2,best_m]= deal(cut,cheeger,cutPart1,cutPart2,m);
                 clusters_new=allClusters;
@@ -362,11 +357,9 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             displayCurrentObjective(bestCut,bestCheeger,normalized);
             fprintf('\n');
         end
-
     end
-
-    
 end
+
 
 % Computes Rcut/Ncut and Cheeger Cut values
 function [cut,cheeger]=computeCutCheeger(cutParts,cutPart1,cutPart2,m,l)
@@ -375,6 +368,7 @@ function [cut,cheeger]=computeCutCheeger(cutParts,cutPart1,cutPart2,m,l)
     cheeger=max([cutParts((1:l-1)~=m) cutPart1 cutPart2]);
                                 
 end
+
 
 % Computes the thresholded 2nd eigenvector of the standard graph Laplacian
 function [start,flag]=computeStandardEigenvector(W,normalized,deg,verbosity)
@@ -402,10 +396,9 @@ function [start,flag]=computeStandardEigenvector(W,normalized,deg,verbosity)
             disp(exc.message);
         end
         start=zeros(num,1);
-    end
-    
-    
+    end   
 end
+
 
 % Displays the current objective value
 function displayCurrentObjective(cut_temp,cheeger_temp,normalized)
@@ -427,104 +420,97 @@ end
 % components. The method takes the one yielding the lower Cut/Cheeger.
 function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_comp,W_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m)
       
-        % input parameter deg has to be the degree vector (also in unnormalised case)
-        %deg=full(sum(W));
-        %Make deg a row vector;
-        if (size(deg,1)>1) 
-            deg=deg';
+    % input parameter deg has to be the degree vector (also in unnormalised case)
+    %deg=full(sum(W));
+    %Make deg a row vector;
+    if (size(deg,1)>1) 
+        deg=deg';
+    end
+        
+    [vminM_sorted, index]=sort(vmin_comp);
+    [vminU,indexU]=unique(vminM_sorted,'last');
+
+    W_sorted=W_comp(index,index);
+
+    % calculate cuts
+    deg_comp=deg(index_m(index_comp));
+    volumes_threshold=cumsum(deg_comp(index));
+    triup=triu(W_sorted,1);
+    tempcuts_threshold=volumes_threshold - 2*cumsum(full(sum(triup))) - cumsum(full(diag(W_sorted)))';
+    tempcuts_threshold2=(volumes_threshold(end)-volumes_threshold) - (sum(sum(W_sorted))-2*cumsum(full(sum(triup,2)))' - cumsum(full(diag(W_sorted)))');            
+
+    % it may happen that (due to numerical imprecision) the tempcuts
+    % are a small factor of epsilon below zero.
+    tempcuts_threshold(tempcuts_threshold<0)=0;
+    tempcuts_threshold2(tempcuts_threshold2<0)=0;
+
+    tempcuts_threshold=tempcuts_threshold(indexU);
+    tempcuts_threshold2=tempcuts_threshold2(indexU);
+    volumes_threshold=volumes_threshold(indexU);
+
+    % divide by size/volume
+    if(normalized)
+        cutparts1_threshold=(tempcuts_threshold(1:end-1)+cut_rest)./(volumes_threshold(1:end-1)+size_rest);
+        cutparts1_threshold(isnan(cutparts1_threshold))=0;
+        cutparts2_threshold=tempcuts_threshold2(1:end-1)./(volumes_threshold(end)-volumes_threshold(1:end-1));
+        cutparts2_threshold(isnan(cutparts2_threshold))=0;
+
+        cutparts1b_threshold=tempcuts_threshold(1:end-1)./volumes_threshold(1:end-1);
+        cutparts1b_threshold(isnan(cutparts1b_threshold))=0;
+        cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((volumes_threshold(end)-volumes_threshold(1:end-1))+size_rest);
+        cutparts2b_threshold(isnan(cutparts2b_threshold))=0;
+    else
+        sizes_threshold=cumsum(ones(1,size(vmin_comp,1)-1));
+        sizes_threshold=sizes_threshold(indexU(1:end-1));
+        cutparts1_threshold=(tempcuts_threshold(1:end-1)+cut_rest)./(sizes_threshold+size_rest);
+        cutparts2_threshold=tempcuts_threshold2(1:end-1)./(size(vmin_comp,1)-sizes_threshold);
+
+        cutparts1b_threshold=tempcuts_threshold(1:end-1)./sizes_threshold;
+        cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((size(vmin_comp,1)-sizes_threshold)+size_rest);
+    end
+
+    %calculate total cuts
+    if(crit_thresh==1)
+        cuts_threshold=cutparts1_threshold+cutparts2_threshold;
+        [cut1,threshold_index]=min(cuts_threshold);
+
+        cuts_threshold_b=cutparts1b_threshold+cutparts2b_threshold;
+        [cut1b,threshold_index_b]=min(cuts_threshold_b);
+
+        comp_case=1;
+        if (cut1b<cut1) 
+            comp_case=2;
         end
-        
-        [vminM_sorted, index]=sort(vmin_comp);
-        [vminU,indexU]=unique(vminM_sorted,'last');
-        
-        
-        W_sorted=W_comp(index,index);
+    else
+        cheegers_threshold=max(cutparts1_threshold,cutparts2_threshold);
+        [cheeger1,threshold_index]=min(cheegers_threshold);
 
-        % calculate cuts
-        deg_comp=deg(index_m(index_comp));
-        volumes_threshold=cumsum(deg_comp(index));
-        triup=triu(W_sorted,1);
-        tempcuts_threshold=volumes_threshold - 2*cumsum(full(sum(triup))) - cumsum(full(diag(W_sorted)))';
-        tempcuts_threshold2=(volumes_threshold(end)-volumes_threshold) - (sum(sum(W_sorted))-2*cumsum(full(sum(triup,2)))' - cumsum(full(diag(W_sorted)))');            
+        cheegers_threshold_b=max(cutparts1_threshold,cutparts2_threshold);
+        [cheeger1b,threshold_index_b]=min(cheegers_threshold_b);
 
-        % it may happen that (due to numerical imprecision) the tempcuts
-        % are a small factor of epsilon below zero.
-        tempcuts_threshold(tempcuts_threshold<0)=0;
-        tempcuts_threshold2(tempcuts_threshold2<0)=0;
-        
-        tempcuts_threshold=tempcuts_threshold(indexU);
-        tempcuts_threshold2=tempcuts_threshold2(indexU);
-        volumes_threshold=volumes_threshold(indexU);
-        
-        
-        % divide by size/volume
-        if(normalized)
-            cutparts1_threshold=(tempcuts_threshold(1:end-1)+cut_rest)./(volumes_threshold(1:end-1)+size_rest);
-            cutparts1_threshold(isnan(cutparts1_threshold))=0;
-            cutparts2_threshold=tempcuts_threshold2(1:end-1)./(volumes_threshold(end)-volumes_threshold(1:end-1));
-            cutparts2_threshold(isnan(cutparts2_threshold))=0;
-            
-            cutparts1b_threshold=tempcuts_threshold(1:end-1)./volumes_threshold(1:end-1);
-            cutparts1b_threshold(isnan(cutparts1b_threshold))=0;
-            cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((volumes_threshold(end)-volumes_threshold(1:end-1))+size_rest);
-            cutparts2b_threshold(isnan(cutparts2b_threshold))=0;
-        else
-            sizes_threshold=cumsum(ones(1,size(vmin_comp,1)-1));
-            sizes_threshold=sizes_threshold(indexU(1:end-1));
-            cutparts1_threshold=(tempcuts_threshold(1:end-1)+cut_rest)./(sizes_threshold+size_rest);
-            cutparts2_threshold=tempcuts_threshold2(1:end-1)./(size(vmin_comp,1)-sizes_threshold);
-            
-            cutparts1b_threshold=tempcuts_threshold(1:end-1)./sizes_threshold;
-            cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((size(vmin_comp,1)-sizes_threshold)+size_rest);
+        comp_case=1;
+        if (cheeger1b<cheeger1) 
+            comp_case=2;
         end
+    end
 
-        
-        
-        %calculate total cuts
-        if(crit_thresh==1)
-            cuts_threshold=cutparts1_threshold+cutparts2_threshold;
-            [cut1,threshold_index]=min(cuts_threshold);
-            
-            cuts_threshold_b=cutparts1b_threshold+cutparts2b_threshold;
-            [cut1b,threshold_index_b]=min(cuts_threshold_b);
-            
-            comp_case=1;
-            if (cut1b<cut1) 
-                comp_case=2;
-            end
-        else
-            cheegers_threshold=max(cutparts1_threshold,cutparts2_threshold);
-            [cheeger1,threshold_index]=min(cheegers_threshold);
-            
-            cheegers_threshold_b=max(cutparts1_threshold,cutparts2_threshold);
-            [cheeger1b,threshold_index_b]=min(cheegers_threshold_b);
-            
-            comp_case=1;
-            if (cheeger1b<cheeger1) 
-                comp_case=2;
-            end
-        end
+    if(comp_case==1)
+        cutPart1=cutparts1_threshold(threshold_index);
+        cutPart2=cutparts2_threshold(threshold_index);
 
-        if(comp_case==1)
-            cutPart1=cutparts1_threshold(threshold_index);
-            cutPart2=cutparts2_threshold(threshold_index);
+        allClustersInClusterM_comp= (vmin_comp>vminU(threshold_index));
 
-            allClustersInClusterM_comp= (vmin_comp>vminU(threshold_index));
-        
-            allClustersInClusterM= zeros(size_m,1);
-            allClustersInClusterM(index_comp)=allClustersInClusterM_comp;
-        else
-            cutPart1=cutparts1b_threshold(threshold_index_b);
-            cutPart2=cutparts2b_threshold(threshold_index_b);
+        allClustersInClusterM= zeros(size_m,1);
+        allClustersInClusterM(index_comp)=allClustersInClusterM_comp;
+    else
+        cutPart1=cutparts1b_threshold(threshold_index_b);
+        cutPart2=cutparts2b_threshold(threshold_index_b);
 
-            allClustersInClusterM_comp= (vmin_comp>vminU(threshold_index_b));
-        
-            allClustersInClusterM= ones(size_m,1);
-            allClustersInClusterM(index_comp)=allClustersInClusterM_comp;
-        end
-        
-        
+        allClustersInClusterM_comp= (vmin_comp>vminU(threshold_index_b));
 
+        allClustersInClusterM= ones(size_m,1);
+        allClustersInClusterM(index_comp)=allClustersInClusterM_comp;
+    end
 end
 
 
