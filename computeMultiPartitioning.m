@@ -384,8 +384,8 @@ function [start,flag]=computeStandardEigenvector(W,normalized,deg,verbosity)
     D=spdiags(deg,0,num,num);
     opts.disp=0;
     opts.tol = 1E-10;
-    opts.maxit=20;
-    opts.issym = 1;
+    %opts.maxit=20;
+    %opts.issym = 1;
     
     flag=true;
     try
