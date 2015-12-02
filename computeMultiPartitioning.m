@@ -1,22 +1,22 @@
-function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,criterion_threshold,criterion_multicluster,verbosity)
+function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,crit_thresh,crit_multi,verbosity)
 % Computes a multipartitioning of the data given by a similarity matrix W 
 % by recursively computing bipartitions using eigenvectors of the 1-Laplacian.
 %
 % Usage:	[clusters,cuts,cheegers,eigvec,lambda] 
-%           = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,criterion_threshold,criterion_multicluster,verbosity)
+%           = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,crit_thresh,crit_multi,verbosity)
 %
 % Input:
-%   W                       - Sparse weight matrix. Has to be symmetric.
-%   normalized              - true for Ncut/NCC, false for Rcut/RCC
-%   k                       - number of clusters
-%   init2nd     			- true for one initialization with the thresholded 2nd 
-%                             eigenvector of the standard graph Laplacian.
-%   numTrials   		    - number of additional runs with different random 
-%                 			  initializations at each level
-%   criterion_threshold     - 1: Rcut/Ncut, 2: RCC/NCC
-%   criterion_multicluster  - 1: Rcut/Ncut, 2: RCC/NCC
-%   verbosity               - Controls how much information is displayed. Levels 0-3,
-%                             default is 2.
+%   W           - Sparse weight matrix. Has to be symmetric.
+%   normalized  - true for Ncut/NCC, false for Rcut/RCC
+%   k           - number of clusters
+%   init2nd     - true for one initialization with the thresholded 2nd 
+%                 eigenvector of the standard graph Laplacian.
+%   numTrials   - number of additional runs with different random 
+%                 initializations at each level
+%   crit_thresh - 1: Rcut/Ncut, 2: RCC/NCC
+%   crit_multi  - 1: Rcut/Ncut, 2: RCC/NCC
+%   verbosity   - Controls how much information is displayed. Levels 0-3,
+%                 default is 2.
 %
 % Output:
 %   clusters    - mx(k-1) matrix containing in each column the computed 
@@ -25,9 +25,14 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
 %                 each partitioning step.
 %   cheegers    - (k-1)x1 vector containing the RCC/NCC values after each 
 %                 partitioning step.
-%   eigvec: mx1 vector containing the second eigenvector of the 1-Laplacian
-%   lambda: corresponding eigenvalue
+%   eigvec      - mx1 vector containing 2nd eigenvector of the 1-Laplacian
+%   lambda      - corresponding eigenvalue
 %
+%
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
 %
 % (C)2010-11 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
@@ -39,8 +44,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
     assert(k<=num, 'Wrong usage. Number of clusters is larger than size of the graph.');
     assert(isnumeric(W) && issparse(W),'Wrong usage. W should be sparse and numeric.');
     assert(sum(sum(W~=W'))==0,'Wrong usage. W should be symmetric.');
-    assert(isempty(find(diag(W)~=0,1)),'Wrong usage. Graph contains self loops. W has to have zero diagonal.');
-    assert((criterion_threshold==1 || criterion_threshold==2) && (criterion_multicluster==1 || criterion_multicluster==2), 'Wrong usage. Unknown clustering criterion. Available clustering criteria are 1: Ncut/Rcut, 2: NCC/RCC.');
+    assert((crit_thresh==1 || crit_thresh==2) && (crit_multi==1 || crit_multi==2), 'Wrong usage. Unknown clustering criterion. Available clustering criteria are 1: Ncut/Rcut, 2: NCC/RCC.');
     assert(init2nd || numTrials>0, 'Wrong usage. If second eigenvector initialization is turned off, numTrials has to be positive.');
     
   	threshold_type = -1; 
@@ -74,7 +78,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             if(verbosity>=2) disp('...Computing second eigenvector of standard graph Laplacian.'); end
             [start,flag]=computeStandardEigenvector(W,normalized,deg,verbosity);
             if(flag) % if eigenvector computation succeeded
-                start = createClustersGeneral(start,W,normalized,threshold_type,criterion_threshold,deg2,true);
+                start = createClustersGeneral(start,W,normalized,threshold_type,crit_thresh,deg2,true);
                 if (sum(start)>sum(start==0)) start=1-start; end
                 start=start/sum(start);
     
@@ -83,7 +87,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                 if(verbosity>=2) disp(['...Computing nonlinear eigenvector of graph 1-Laplacian. ',...
                     'Initialization with second eigenvector of standard graph Laplacian.']);  end
                 [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
-                [allClusters, cut,cheeger,cutPart1,cutPart2] =  createClustersGeneral(vmin,W,normalized,threshold_type,criterion_threshold,deg2,true);
+                [allClusters, cut,cheeger,cutPart1,cutPart2] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,true);
 
                 % Display current objective
                 if(verbosity>=2) displayCurrentObjective(cut,cheeger,normalized); end
@@ -101,13 +105,13 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             if(verbosity>=2) fprintf('...Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d.\n',l,numTrials); end
             start=randn(num,1);
             [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
-            [allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp] =  createClustersGeneral(vmin,W,normalized,threshold_type,criterion_threshold,deg2,true);
+            [allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,true);
 
             % Display current objective
             if(verbosity>=2) displayCurrentObjective(cut_temp,cheeger_temp,normalized); end
 
             % Check if we're better
-            if ((criterion_threshold==1 && cut_temp<cut) || (criterion_threshold==2 && cheeger_temp<cheeger))
+            if ((crit_thresh==1 && cut_temp<cut) || (crit_thresh==2 && cheeger_temp<cheeger))
                 [allClusters, cut,cheeger,cutPart1,cutPart2,eigvec,lambda] = deal(allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp,vmin,fval(end));
             end
         end
@@ -211,7 +215,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                             end
 
                             %Check if we're better						
-                            if (criterion_threshold==1 && cutPart1_temp+cutPart2_temp<cutPart1+cutPart2 || criterion_threshold==2 && max(cutPart1_temp,cutPart2_temp)<max(cutPart1,cutPart2))
+                            if (crit_thresh==1 && cutPart1_temp+cutPart2_temp<cutPart1+cutPart2 || crit_thresh==2 && max(cutPart1_temp,cutPart2_temp)<max(cutPart1,cutPart2))
                                 [cutPart1,cutPart2,allClustersInCluster_m]=deal(cutPart1_temp,cutPart2_temp,allClustersInCluster_m_temp);
                                 assert(length(allClustersInCluster_m)==length(index_m));
                             end
@@ -245,7 +249,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                                 if(verbosity>=2) disp('...Computing second eigenvector of standard graph Laplacian.'); end
                                 [start_comp, flag]=computeStandardEigenvector(Wm_comp,normalized,deg(index_m(index_comp)),verbosity);
                                 if(flag)
-                                    start_m =  createSubClusters2(start_comp,Wm_comp,normalized,deg,criterion_threshold,index_comp,index_m,cut_rest,size_rest,size_m);
+                                    start_m =  createSubClusters2(start_comp,Wm_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m);
                                     start_comp=start_m(index_comp);
                                     assert(size(start_comp,1)==size(Wm_comp,1));
                                     if (sum(start_comp)>sum(start_comp==0)) start_comp=1-start_comp; end
@@ -255,7 +259,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                                     if(verbosity>=2) disp(['...Computing nonlinear eigenvector of graph 1-Laplacian. ', ...
                                         'Initialization with second eigenvector of standard graph Laplacian.']); end
                                     vmin_comp=computeEigenvectorGeneral(Wm_comp2,start_comp,normalized,verbosity>=3);
-                                    [allClustersInCluster_m_temp, cutPart1_temp, cutPart2_temp] =  createSubClusters2(vmin_comp,Wm_comp,normalized,deg,criterion_threshold,index_comp,index_m,cut_rest,size_rest,size_m);
+                                    [allClustersInCluster_m_temp, cutPart1_temp, cutPart2_temp] =  createSubClusters2(vmin_comp,Wm_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m);
 
                                     % Display current objective
                                     if(verbosity>=2) 
@@ -268,7 +272,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                                 end
 
                                 % Check if we're better
-                                if (criterion_threshold==1 && cutPart1_temp+cutPart2_temp<cutPart1+cutPart2 || criterion_threshold==2 && max(cutPart1_temp,cutPart2_temp)<max(cutPart1,cutPart2))
+                                if (crit_thresh==1 && cutPart1_temp+cutPart2_temp<cutPart1+cutPart2 || crit_thresh==2 && max(cutPart1_temp,cutPart2_temp)<max(cutPart1,cutPart2))
                                     [cutPart1,cutPart2,allClustersInCluster_m]=deal(cutPart1_temp,cutPart2_temp,allClustersInCluster_m_temp);
                                     assert(length(allClustersInCluster_m)==length(index_m));
                                 end
@@ -281,7 +285,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                                 if(verbosity>=2) fprintf('...Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d. \n',k,numTrials); end
                                 start_comp=randn(size(Wm_comp,1),1);
                                 vmin_comp=computeEigenvectorGeneral(Wm_comp2,start_comp,normalized,verbosity>=3);
-                                [allClustersInCluster_m_temp, cutPart1_temp, cutPart2_temp] =  createSubClusters2(vmin_comp,Wm_comp,normalized,deg,criterion_threshold,index_comp,index_m,cut_rest,size_rest,size_m);
+                                [allClustersInCluster_m_temp, cutPart1_temp, cutPart2_temp] =  createSubClusters2(vmin_comp,Wm_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m);
 
                                 % Display current objective
                                 if(verbosity>=2) 
@@ -290,7 +294,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                                 end
 
                                 %Check if we're better						
-                                if (criterion_threshold==1 && cutPart1_temp+cutPart2_temp<cutPart1+cutPart2 || criterion_threshold==2 && max(cutPart1_temp,cutPart2_temp)<max(cutPart1,cutPart2))
+                                if (crit_thresh==1 && cutPart1_temp+cutPart2_temp<cutPart1+cutPart2 || crit_thresh==2 && max(cutPart1_temp,cutPart2_temp)<max(cutPart1,cutPart2))
                                     [cutPart1,cutPart2,allClustersInCluster_m]=deal(cutPart1_temp,cutPart2_temp,allClustersInCluster_m_temp);
                                     assert(length(allClustersInCluster_m)==length(index_m));
                                 end
@@ -315,7 +319,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             end
             
 			% check if partitoning of the current subgraph gives better cut
-            if (criterion_multicluster==1 && cut<bestCut) || (criterion_multicluster==2 && cheeger<bestCheeger)
+            if (crit_multi==1 && cut<bestCut) || (crit_multi==2 && cheeger<bestCheeger)
                 [bestCut,bestCheeger,bestCutPart1,bestCutPart2,best_m]= deal(cut,cheeger,cutPart1,cutPart2,m);
                 clusters_new=allClusters;
                 clusters_new(index_m)=(l-m)*allClustersInCluster_m+clusters_new(index_m);
@@ -421,7 +425,7 @@ end
 % on the subgraph, as we can keep each of the clusters on the connected 
 % component as cluster and merge the other one with the remaining connected 
 % components. The method takes the one yielding the lower Cut/Cheeger.
-function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_comp,W_comp,normalized,deg,criterion_threshold,index_comp,index_m,cut_rest,size_rest,size_m)
+function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_comp,W_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m)
       
         % input parameter deg has to be the degree vector (also in unnormalised case)
         %deg=full(sum(W));
@@ -439,9 +443,9 @@ function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_c
         % calculate cuts
         deg_comp=deg(index_m(index_comp));
         volumes_threshold=cumsum(deg_comp(index));
-        triup=triu(W_sorted);
-        tempcuts_threshold=volumes_threshold - 2*cumsum(full(sum(triup)));
-        tempcuts_threshold2=(volumes_threshold(end)-volumes_threshold) - (sum(sum(W_sorted))-2*cumsum(full(sum(triup,2)))');            
+        triup=triu(W_sorted,1);
+        tempcuts_threshold=volumes_threshold - 2*cumsum(full(sum(triup))) - cumsum(full(diag(W_sorted)))';
+        tempcuts_threshold2=(volumes_threshold(end)-volumes_threshold) - (sum(sum(W_sorted))-2*cumsum(full(sum(triup,2)))' - cumsum(full(diag(W_sorted)))');            
 
         % it may happen that (due to numerical imprecision) the tempcuts
         % are a small factor of epsilon below zero.
@@ -477,7 +481,7 @@ function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_c
         
         
         %calculate total cuts
-        if(criterion_threshold==1)
+        if(crit_thresh==1)
             cuts_threshold=cutparts1_threshold+cutparts2_threshold;
             [cut1,threshold_index]=min(cuts_threshold);
             

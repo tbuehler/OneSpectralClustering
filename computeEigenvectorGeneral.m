@@ -45,7 +45,7 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
     assert(isnumeric(W) && issparse(W),'Wrong usage. W should be sparse and numeric.');
 
 	[ix,jx,wval]=find(W);
-	W2=triu(W);
+	W2=triu(W,1); % diagonal part plays no role in inner problem
 	MaxSumSquaredWeights=2*max(sum(W.^2));
 
 	pars.MAXITER=40;
@@ -117,10 +117,8 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
 		  vec = fcur;
 		else
 		  ixNull=find(fold==0); %ixNull=ixNull(randperm(length(ixNull)));
-		  ixPos=find(fold>0);
-		  ixNeg=find(fold<0);
-		  Pos=sum(deg(ixPos));
-		  Neg=sum(deg(ixNeg));
+		  Pos=sum(deg(fold>0));
+		  Neg=sum(deg(fold<0));
 		  Null=sum(deg(ixNull));
 		  fcur=deg.*sign(fold);
 		  if(Null>0)

@@ -78,7 +78,6 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
     assert(k<=size(W,1), 'Wrong usage. Number of clusters is larger than size of the graph.');
     assert(isnumeric(W) && issparse(W),'Wrong usage. W should be sparse and numeric.');
     assert(sum(sum(W~=W'))==0,'Wrong usage. W should be symmetric.');
-    assert(isempty(find(diag(W)~=0,1)),'Wrong usage. Graph contains self loops. W has to have zero diagonal.');
 	assert(~(numOuter>0 && numInner==0), sprintf('Wrong usage. numOuter=%d but numInner=%d. numInner has to be positive.',numOuter,numInner));
     
     switch(lower(criterion))

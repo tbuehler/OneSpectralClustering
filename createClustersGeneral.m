@@ -52,8 +52,7 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
         notinsideregion=false;
     end
 
-    assert(isempty(find(diag(W)~=0,1)),'Graph contains self loops. W has to have zero diagonal.');
-	
+   	
 	if threshold_type>=0
             threshold= determineThreshold(threshold_type,vmin);
             %allClusters= computeClusterIndicatorFunction(vmin,threshold);
@@ -68,7 +67,7 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
 
             % sum of all degrees in the cluster minus weights within cluster
             deg2=sum(W_sorted); % this has to be the degree also in unnormalized variant
-            tempcuts_threshold=cumsum(deg2) - 2*cumsum(full(sum(triu(W_sorted))));
+            tempcuts_threshold=cumsum(deg2) - 2*cumsum(full(sum(triu(W_sorted,1)))) - cumsum(full(diag(W_sorted)))' ;
             
             % divide by volume/size
             if(normalized)
