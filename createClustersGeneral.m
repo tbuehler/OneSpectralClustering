@@ -1,21 +1,21 @@
-function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createClustersGeneral(vmin,W,normalized,threshold_type,criterion,deg,notinsideregion)
+function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createClustersGeneral(vmin,W,normalized,thresh_type,criterion,deg,notinsreg)
 % Transforms an eigenvector into a cluster indicator function by thresholding.
 % 
 % Usage:	[allClusters, cut,cheeger,cutPart1,cutPart2,threshold] 
-%			= createClusters(vmin,W,normalized,threshold_type,criterion)
+%			= createClusters(vmin,W,normalized,thresh_type,criterion)
 %
 % Input:
 %   vmin        - The eigenvector.
 %   W           - Weight matrix.
 %   normalized  - True for Ncut/NCC, false for Rcut/RCC.
-%   threshold_type - 0: zero, 1: median, 2: mean, -1: best
+%   thresh_type - 0: zero, 1: median, 2: mean, -1: best
 %   criterion   - thresholding criterion. 1: Ratio/Normalized Cut 
 %                 2: Ratio/Normalized Cheeger Cut
 %
 %   deg         - Degrees of vertices as column vector. Default is 
 %                 sum(W,2) in normalized case and ones(size(W,1),1) in 
 %                 unnormalized case. Will be ignored if normalized=false.
-%   notinsideregion   - true: don't consider cheeger cuts where you threshold 
+%   notinsreg   - true: don't consider cheeger cuts where you threshold 
 %                 inside of a region of same value. default is false.
 %
 % Output:
@@ -49,12 +49,12 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
 	end
 
     if (nargin<7)
-        notinsideregion=false;
+        notinsreg=false;
     end
 
    	
-	if threshold_type>=0
-            threshold= determineThreshold(threshold_type,vmin);
+	if thresh_type>=0
+            threshold= determineThreshold(thresh_type,vmin);
             %allClusters= computeClusterIndicatorFunction(vmin,threshold);
             allClusters= (vmin>threshold);
 		    [cutPart1,cutPart2] = computeCutValue(allClusters,W,normalized); %cutPart1: vmin<threshold, cutPart2: vmin>threshold
@@ -89,7 +89,7 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
 
             
             % also thresholds within regions of same value
-            if (~notinsideregion)
+            if (~notinsreg)
             
                 % find best cut/cheeger
                 if(criterion==1)
@@ -157,12 +157,12 @@ end
 
 
 
-function threshold = determineThreshold(threshold_type,u)
+function threshold = determineThreshold(thresh_type,u)
 % Select the treshold for the cluster indicator function
 
-    assert(threshold_type==0 || threshold_type==1 || threshold_type==2);
+    assert(thresh_type==0 || thresh_type==1 || thresh_type==2);
     
-    switch threshold_type
+    switch thresh_type
         case 0
             threshold=0;
         case 1
