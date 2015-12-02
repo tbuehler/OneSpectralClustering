@@ -1,8 +1,8 @@
-function [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,criterion_threshold,criterion_multicluster,verbosity)
+function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,criterion_threshold,criterion_multicluster,verbosity)
 % Computes a multipartitioning of the data given by a similarity matrix W 
 % by recursively computing bipartitions using eigenvectors of the 1-Laplacian.
 %
-% Usage:	[clusters,cuts,cheegers] 
+% Usage:	[clusters,cuts,cheegers,eigvec,lambda] 
 %           = computeMultiPartitioning(W,normalized,k,init2nd,numTrials,criterion_threshold,criterion_multicluster,verbosity)
 %
 % Input:
@@ -25,6 +25,9 @@ function [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,init
 %                 each partitioning step.
 %   cheegers    - (k-1)x1 vector containing the RCC/NCC values after each 
 %                 partitioning step.
+%   eigvec: mx1 vector containing the second eigenvector of the 1-Laplacian
+%   lambda: corresponding eigenvalue
+%
 %
 % (C)2010-11 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
@@ -63,7 +66,7 @@ function [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,init
         if(verbosity>=1) disp('WARNING! GRAPH IS NOT CONNECTED!');end
         if(verbosity>=2) disp('Optimal Cut achieved by separating connected components.');end
         allClusters = balanceConnectedComponents(comp,sizes,W,normalized);
-        [cut,cheeger,cutPart1,cutPart2]=deal(0);
+        [cut,cheeger,cutPart1,cutPart2,eigvec,lambda]=deal(0,0,0,0,zeros(length(allClusters),1),0);
     else
         if(verbosity>=2) disp('Computing partitioning.'); end
         if(init2nd)
@@ -79,11 +82,14 @@ function [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,init
                 % Computing partitioning initialized with second eigenvector.
                 if(verbosity>=2) disp(['...Computing nonlinear eigenvector of graph 1-Laplacian. ',...
                     'Initialization with second eigenvector of standard graph Laplacian.']);  end
-                vmin=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
+                [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
                 [allClusters, cut,cheeger,cutPart1,cutPart2] =  createClustersGeneral(vmin,W,normalized,threshold_type,criterion_threshold,deg2,true);
 
                 % Display current objective
                 if(verbosity>=2) displayCurrentObjective(cut,cheeger,normalized); end
+                
+                eigvec=vmin;
+                lambda=fval(end);
             else
                 cut=inf;
                 cheeger=inf;
@@ -94,7 +100,7 @@ function [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,init
         for l=1:numTrials
             if(verbosity>=2) fprintf('...Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d.\n',l,numTrials); end
             start=randn(num,1);
-            vmin=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
+            [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
             [allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp] =  createClustersGeneral(vmin,W,normalized,threshold_type,criterion_threshold,deg2,true);
 
             % Display current objective
@@ -102,7 +108,7 @@ function [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,init
 
             % Check if we're better
             if ((criterion_threshold==1 && cut_temp<cut) || (criterion_threshold==2 && cheeger_temp<cheeger))
-                [allClusters, cut,cheeger,cutPart1,cutPart2] = deal(allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp);
+                [allClusters, cut,cheeger,cutPart1,cutPart2,eigvec,lambda] = deal(allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp,vmin,fval(end));
             end
         end
     end

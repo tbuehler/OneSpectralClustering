@@ -1,4 +1,4 @@
-function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter,numInner,verbosity)
+function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criterion,k,numOuter,numInner,verbosity)
 % Performs 1-Spectral Clustering as described in the paper
 %
 % M. Hein and T. Bühler
@@ -37,6 +37,8 @@ function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter
 %                 after each partitioning step.
 %   cheegers    - (k-1)x1 vector containing the Ratio/Normalized Cheeger 
 %                 Cut values after each partitioning step.
+%   eigvec      - mx1 vector containing the second eigenvector of the 1-Laplacian
+%   lambda      - corresponding eigenvalue
 %
 %
 % If no additional parameters are specified, the multipartitioning scheme
@@ -54,6 +56,12 @@ function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter
 % initialization, uncouple multicut-criterion from thresholding criterion), 
 % call the subroutine computeMultiPartitioning directly. 
 %
+%
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+% 
 % (C)2010-11 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
@@ -117,7 +125,7 @@ function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter
     if (verbosity>=1 && numOuter>0) fprintf('STARTING RUN WITH SECOND EIGENVECTOR INITIALIZATION.\n'); end;
         
     try
-        [clusters,cuts,cheegers] = computeMultiPartitioning(W,normalized,k,true,0,criterion_inner,criterion_inner,verbosity);
+        [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,normalized,k,true,0,criterion_inner,criterion_inner,verbosity);
     catch exc
         %disp(exc.identifier);
         if (strcmp(exc.identifier,'OneSpect:cutinf'))
@@ -130,6 +138,8 @@ function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter
                 cuts=inf;
                 cheegers=inf;
                 clusters=NaN(size(W,1),1);
+                eigvec=NaN(size(W,1),1);
+                lambda=NaN;
                 fprintf(strcat('ERROR!\t',exc.message,'\n'));
                 fprintf('Rerun with additional random initializations.\n');
                 return;
@@ -143,11 +153,19 @@ function [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter
     for l=1:numOuter
         if (verbosity>=1) fprintf('STARTING RUN WITH RANDOM INITIALIZATIONS %d OF %d.\n', l,numOuter); end;
         
-        [clusters_temp,cuts_temp,cheegers_temp] = computeMultiPartitioning(W,normalized,k,false,numInner,criterion_inner,criterion_inner,verbosity);
+        [clusters_temp,cuts_temp,cheegers_temp,eigvec_temp,lambda_temp] = computeMultiPartitioning(W,normalized,k,false,numInner,criterion_inner,criterion_inner,verbosity);
 
+        % if the final cut/cheeger cut is better according to the given
+        % criterion, take this partition
         if ((criterion_inner==1 && cuts_temp(end)<cuts(end)) || (criterion_inner==2 && cheegers_temp(end)<cheegers(end)))
             [clusters,cuts,cheegers]=deal(clusters_temp,cuts_temp,cheegers_temp);
         end
+        % for the eigenvector and eigenvalue, we have to look at the first
+        % partition
+        if ((criterion_inner==1 && cuts_temp(1)<cuts(1)) || (criterion_inner==2 && cheegers_temp(1)<cheegers(1)))
+            [eigvec,lambda]=deal(eigvec_temp,lambda_temp);
+        end
+        
     end
     
 
