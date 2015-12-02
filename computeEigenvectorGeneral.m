@@ -22,7 +22,7 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation, either version 3 of the License, or
-% (at your option) any later version.%
+% (at your option) any later version.
 %
 % Copyright 2010-15 Thomas Bühler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
@@ -63,7 +63,7 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
     
 	counter=0;
 	diffFunction=inf; 
-    rvalold=zeros(length(ix),1); 
+    alphaold=zeros(length(ix),1); 
 	FctValOld=inf;
 	FctValOuter=[]; 
     fnew=fold; 
@@ -131,7 +131,7 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
 		end
 	  
 		% Solve inner problem
-		[fnew,rvalold,Obj,niter]=solveInnerProblem(W2,FctVal*full(vec),FctVal/FctOld*rvalold,pars.MAXITER,pars.epsilon,MaxSumSquaredWeights); % 
+		[fnew,alphaold,Obj,niter]=solveInnerProblem(W2,FctVal*full(vec),FctVal/FctOld*alphaold,pars.MAXITER,pars.epsilon,MaxSumSquaredWeights); % 
         
         if (Obj==0) 
             fnew=fold;
