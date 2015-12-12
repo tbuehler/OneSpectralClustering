@@ -78,7 +78,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
     assert(k<=size(W,1), 'Wrong usage. Number of clusters is larger than size of the graph.');
     assert(isnumeric(W) && issparse(W),'Wrong usage. W should be sparse and numeric.');
     assert(sum(sum(W~=W'))==0,'Wrong usage. W should be symmetric.');
-	assert(~(numOuter>0 && numInner==0), sprintf('Wrong usage. numOuter=%d but numInner=%d. numInner has to be positive.',numOuter,numInner));
+    assert(~(numOuter>0 && numInner==0), sprintf('Wrong usage. numOuter=%d but numInner=%d. numInner has to be positive.',numOuter,numInner));
     
     switch(lower(criterion))
         case 'ncut'    
@@ -92,7 +92,6 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
         otherwise
             error('Wrong usage. Unknown clustering criterion. Available clustering criteria are Ncut/NCC/Rcut/RCC.');
     end
-    
     
     if (verbosity>=1)
         if(criterion_inner==1)
@@ -147,7 +146,6 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
             rethrow(exc);
         end
     end
-            
     
     for l=1:numOuter
         if (verbosity>=1) fprintf('STARTING RUN WITH RANDOM INITIALIZATIONS %d OF %d.\n', l,numOuter); end;
@@ -166,7 +164,6 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
         end
         
     end
-    
 
     fprintf('Best result:\n');
     if (normalized)

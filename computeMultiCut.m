@@ -14,15 +14,15 @@ function [cut,cheeger,cutParts]= computeMultiCut(W,allClusters,normalized)
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
-	if(normalized)
-		deg=sum(W,2);
-	else
-		deg=ones(size(W,1),1);
-	end
+    if(normalized)
+        deg=sum(W,2);
+    else
+        deg=ones(size(W,1),1);
+    end
     
-	labels=unique(allClusters);
+    labels=unique(allClusters);
     cut=0;
-	cheeger=0;
+    cheeger=0;
     for k=1:length(labels)
 
         clustersM=zeros(size(allClusters,1),1);

@@ -44,115 +44,108 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
         end
     end
     %Make deg a row vector;
-	if (size(deg,1)>1) 
-		deg=deg';
-	end
+    if (size(deg,1)>1) 
+        deg=deg';
+    end
 
     if (nargin<7)
         notinsreg=false;
     end
 
    	
-	if thresh_type>=0
-            threshold= determineThreshold(thresh_type,vmin);
-            %allClusters= computeClusterIndicatorFunction(vmin,threshold);
-            allClusters= (vmin>threshold);
-		    [cutPart1,cutPart2] = computeCutValue(allClusters,W,normalized); %cutPart1: vmin<threshold, cutPart2: vmin>threshold
-            cut=cutPart1+cutPart2;
-            cheeger=max(cutPart1,cutPart2);
+    if thresh_type>=0
+        threshold= determineThreshold(thresh_type,vmin);
+        %allClusters= computeClusterIndicatorFunction(vmin,threshold);
+        allClusters= (vmin>threshold);
+        [cutPart1,cutPart2] = computeCutValue(allClusters,W,normalized); %cutPart1: vmin<threshold, cutPart2: vmin>threshold
+        cut=cutPart1+cutPart2;
+        cheeger=max(cutPart1,cutPart2);
     else
+        [vmin_sorted, index]=sort(vmin);
+        W_sorted=W(index,index);
 
-            [vmin_sorted, index]=sort(vmin);
-            W_sorted=W(index,index);
-
-            % sum of all degrees in the cluster minus weights within cluster
-            deg2=sum(W_sorted); % this has to be the degree also in unnormalized variant
-            tempcuts_threshold=cumsum(deg2) - 2*cumsum(full(sum(triu(W_sorted,1)))) - cumsum(full(diag(W_sorted)))' ;
+        % sum of all degrees in the cluster minus weights within cluster
+        deg2=sum(W_sorted); % this has to be the degree also in unnormalized variant
+        tempcuts_threshold=cumsum(deg2) - 2*cumsum(full(sum(triu(W_sorted,1)))) - cumsum(full(diag(W_sorted)))' ;
             
-            % divide by volume/size
-            if(normalized)
-                volumes_threshold=cumsum(deg(index));
+        % divide by volume/size
+        if(normalized)
+            volumes_threshold=cumsum(deg(index));
                  
-                cutparts1_threshold=tempcuts_threshold(1:end-1)./volumes_threshold(1:end-1);
-                cutparts1_threshold(isnan(cutparts1_threshold))=0;
-                cutparts2_threshold=tempcuts_threshold(1:end-1)./(volumes_threshold(end)-volumes_threshold(1:end-1));
-                cutparts2_threshold(isnan(cutparts2_threshold))=0;
+            cutparts1_threshold=tempcuts_threshold(1:end-1)./volumes_threshold(1:end-1);
+            cutparts1_threshold(isnan(cutparts1_threshold))=0;
+            cutparts2_threshold=tempcuts_threshold(1:end-1)./(volumes_threshold(end)-volumes_threshold(1:end-1));
+            cutparts2_threshold(isnan(cutparts2_threshold))=0;
+        else
+            sizes_threshold=cumsum(ones(1,size(vmin,1)-1));
+            cutparts1_threshold=tempcuts_threshold(1:end-1)./sizes_threshold;
+            cutparts2_threshold=tempcuts_threshold(1:end-1)./(size(vmin,1)-sizes_threshold);
+        end
+
+        % calculate cuts/cheegers
+        cuts_threshold=cutparts1_threshold+cutparts2_threshold;
+        cheegers_threshold=max(cutparts1_threshold,cutparts2_threshold);
+            
+        % also thresholds within regions of same value
+        if (~notinsreg)
+            
+            % find best cut/cheeger
+            if(criterion==1)
+                [cut,threshold_index]=min(cuts_threshold);
+                cheeger=cheegers_threshold(threshold_index);
+            elseif(criterion==3)
+                imbalance=0.05;
+                totalsize=size(vmin,1);
+                maxsize=floor(ceil(totalsize/2)*(1+imbalance));
+                [unbalancedcut,threshold_index]=min(tempcuts_threshold(totalsize-maxsize:maxsize));
+                threshold_index=totalsize-maxsize - 1 + threshold_index;
+                cut=cuts_threshold(threshold_index);
+                cheeger=cheegers_threshold(threshold_index);
             else
-                sizes_threshold=cumsum(ones(1,size(vmin,1)-1));
-                cutparts1_threshold=tempcuts_threshold(1:end-1)./sizes_threshold;
-                cutparts2_threshold=tempcuts_threshold(1:end-1)./(size(vmin,1)-sizes_threshold);
+                [cheeger,threshold_index]=min(cheegers_threshold);
+                cut=cuts_threshold(threshold_index);
             end
 
-            % calculate cuts/cheegers
-            cuts_threshold=cutparts1_threshold+cutparts2_threshold;
-            cheegers_threshold=max(cutparts1_threshold,cutparts2_threshold);
+            % update
+            cutPart1=cutparts1_threshold(threshold_index);
+            cutPart2=cutparts2_threshold(threshold_index);
 
-            
-            % also thresholds within regions of same value
-            if (~notinsreg)
-            
-                % find best cut/cheeger
-                if(criterion==1)
-                    [cut,threshold_index]=min(cuts_threshold);
-                    cheeger=cheegers_threshold(threshold_index);
-                elseif(criterion==3)
-                    imbalance=0.05;
-                    totalsize=size(vmin,1);
-                    maxsize=floor(ceil(totalsize/2)*(1+imbalance));
-                    [unbalancedcut,threshold_index]=min(tempcuts_threshold(totalsize-maxsize:maxsize));
-                    threshold_index=totalsize-maxsize - 1 + threshold_index;
-                    cut=cuts_threshold(threshold_index);
-                    cheeger=cheegers_threshold(threshold_index);
-                else
-                    [cheeger,threshold_index]=min(cheegers_threshold);
-                    cut=cuts_threshold(threshold_index);
-                end
+            allClusters=zeros(size(vmin,1),1);
+            allClusters(index(threshold_index+1:end))=1;
 
-                % update
-                cutPart1=cutparts1_threshold(threshold_index);
-                cutPart2=cutparts2_threshold(threshold_index);
+            threshold=vmin_sorted(threshold_index);
+        else
+            % don't threshold within regions of same value
 
-                allClusters=zeros(size(vmin,1),1);
-                allClusters(index(threshold_index+1:end))=1;
+            %[vminU,indexU]=unique(vmin_sorted(1:end-1));% unique gives index of last occurence
+            [vminU,indexU]=unique(vmin_sorted,'last');% unique gives index of last occurence
+            vminU=vminU(1:end-1); indexU=indexU(1:end-1); 
 
-                threshold=vmin_sorted(threshold_index);
-            
+            % find best cut/cheeger
+            if(criterion==1)
+                [cut,threshold_index]=min(cuts_threshold(indexU));
+                cheeger=cheegers_threshold(indexU(threshold_index));
+            elseif(criterion==3) %here nothing has changed
+                imbalance=0.05;
+                totalsize=size(vmin,1);
+                maxsize=floor(ceil(totalsize/2)*(1+imbalance));
+                [unbalancedcut,threshold_index]=min(tempcuts_threshold(totalsize-maxsize:maxsize));
+                threshold_index=totalsize-maxsize - 1 + threshold_index;
+                cut=cuts_threshold(threshold_index);
+                cheeger=cheegers_threshold(threshold_index);
             else
-            
-                % don't threshold within regions of same value
-
-                %[vminU,indexU]=unique(vmin_sorted(1:end-1));% unique gives index of last occurence
-                [vminU,indexU]=unique(vmin_sorted,'last');% unique gives index of last occurence
-                vminU=vminU(1:end-1); indexU=indexU(1:end-1); 
-
-                % find best cut/cheeger
-                if(criterion==1)
-                    [cut,threshold_index]=min(cuts_threshold(indexU));
-                    cheeger=cheegers_threshold(indexU(threshold_index));
-                elseif(criterion==3) %here nothing has changed
-                    imbalance=0.05;
-                    totalsize=size(vmin,1);
-                    maxsize=floor(ceil(totalsize/2)*(1+imbalance));
-                    [unbalancedcut,threshold_index]=min(tempcuts_threshold(totalsize-maxsize:maxsize));
-                    threshold_index=totalsize-maxsize - 1 + threshold_index;
-                    cut=cuts_threshold(threshold_index);
-                    cheeger=cheegers_threshold(threshold_index);
-                else
-                    [cheeger,threshold_index]=min(cheegers_threshold(indexU));
-                    cut=cuts_threshold(indexU(threshold_index));
-                end
-
-                % update
-                cutPart1=cutparts1_threshold(indexU(threshold_index));
-                cutPart2=cutparts2_threshold(indexU(threshold_index));
-
-                threshold=vmin_sorted(indexU(threshold_index));
-                allClusters=vmin>threshold;
-
+                [cheeger,threshold_index]=min(cheegers_threshold(indexU));
+                cut=cuts_threshold(indexU(threshold_index));
             end
+            
+            % update
+            cutPart1=cutparts1_threshold(indexU(threshold_index));
+            cutPart2=cutparts2_threshold(indexU(threshold_index));
 
+            threshold=vmin_sorted(indexU(threshold_index));
+            allClusters=vmin>threshold;
+        end
     end
-    
 end
 
 
@@ -169,6 +162,5 @@ function threshold = determineThreshold(thresh_type,u)
             threshold = median(u);
         case 2
             threshold = mean(u);
-    end
-       
+    end      
 end

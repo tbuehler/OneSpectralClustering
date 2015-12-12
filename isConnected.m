@@ -12,19 +12,19 @@ function [connected,components]=isConnected(W)
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
-	A = W>0; % adjacency matrix
+    A = W>0; % adjacency matrix
 
-	alreadyseen = zeros(size(W,1),1);
+    alreadyseen = zeros(size(W,1),1);
 
-	currentCandidates=1;
+    currentCandidates=1;
 
-	while ~isempty(currentCandidates)
-		candidates= (sum(A(:,currentCandidates),2)>0);
-		alreadyseen(currentCandidates)=1;
-		currentCandidates=find(candidates-alreadyseen>0);
-	end
+    while ~isempty(currentCandidates)
+        candidates= (sum(A(:,currentCandidates),2)>0);
+        alreadyseen(currentCandidates)=1;
+        currentCandidates=find(candidates-alreadyseen>0);
+    end
 
-	connected = sum(alreadyseen)==size(W,2);
+    connected = sum(alreadyseen)==size(W,2);
     
     components=alreadyseen;
     
