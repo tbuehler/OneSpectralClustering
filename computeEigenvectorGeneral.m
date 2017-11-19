@@ -7,18 +7,24 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
 %   computeEigenvectorGeneral(W,fold,normalized,verbose,deg)
 %
 % Input:
-%   W: Sparse symmetric weight matrix.
-%   fold: Start vector. Use multiple runs with random initialization.
-%   normalized: True/false for normalized/unnormalized 1-spectral clustering.
-%   (Optional:) deg: Degrees of vertices as column vector. Default
-%   is full(sum(W,2)) in normalized case and ones(size(W,1),1) in 
-%   unnormalized case. Will be ignored if normalized=false.
+%   W           - Sparse symmetric weight matrix.
+%   fold        - Start vector. Use multiple runs with random initialization.
+%   normalized  - True/false for normalized/unnormalized 1-spectral clustering.
+%
+%   deg         - Degrees of vertices as column vector. Default is 
+%                 full(sum(W,2)) in normalized case and ones(size(W,1),1) 
+%                 in unnormalized case. Will be ignored if normalized=false.
 %
 % Output:
-%	fold: Final eigenvector.
-%   FctValOuter: Values of the functional in each iteration.
+%	fold        - Final eigenvector.
+%   FctValOuter - Values of the functional in each iteration.
 %
-% (C)2010-11 Matthias Hein and Thomas Buehler
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
+% Copyright 2010-15 Thomas Bühler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
@@ -27,9 +33,9 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
     end
     if nargin<5
         if (normalized)
-			deg=full(sum(W,2));
-		else
-			deg=ones(size(W,1),1);
+            deg=full(sum(W,2));
+        else
+            deg=ones(size(W,1),1);
         end
     else
        deg=full(deg); 
@@ -38,57 +44,66 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
     
     assert(isnumeric(W) && issparse(W),'Wrong usage. W should be sparse and numeric.');
 
-	[ix,jx,wval]=find(W);
-	W2=triu(W);
-	MaxSumSquaredWeights=2*max(sum(W.^2));
+    [ix,jx,wval]=find(W);
+    W2=triu(W,1); % diagonal part plays no role in inner problem
+    MaxSumSquaredWeights=2*max(sum(W.^2));
 
-	pars.MAXITER=40;
-	pars.epsilon = 1E-14; 
-	%pars.tv = 'l1';
-	maxiterations = 100;
+    pars.MAXITER=40;
+    pars.epsilon = 1E-14; 
+    %pars.tv = 'l1';
+    maxiterations = 100;
 
     % Subtract median
     if (~normalized)
-		fold = fold - median(fold);
+        fold = fold - median(fold);
     else
         fold = fold - weighted_median(fold,deg);
     end
     
     
-	counter=0;
-	diffFunction=inf; 
-    rvalold=zeros(length(ix),1); 
-	FctValOld=inf;
-	FctValOuter=[]; 
+    counter=0;
+    diffFunction=inf; 
+    alphaold=zeros(length(ix),1); 
+    FctValOld=inf;
+    FctValOuter=[]; 
     fnew=fold; 
+    
+    MAXITER_bound=5120;%2560; % this will be reduced after the first descent
 
-	while(counter<maxiterations)
+    while(counter<maxiterations)
 	  
-		% compute current functional value
-		sval = wval.*abs(fnew(ix)-fnew(jx));
-		if (~normalized)
-			FctVal = 0.5*sum(sval)/norm(fnew,1);
-		else
-			FctVal = 0.5*sum(sval)/(deg'*abs(fnew));
-		end
+        % compute current functional value
+        sval = wval.*abs(fnew(ix)-fnew(jx));
+        if (~normalized)
+            FctVal = 0.5*sum(sval)/norm(fnew,1);
+        else
+            FctVal = 0.5*sum(sval)/(deg'*abs(fnew));
+        end
 	  
-		% if functional value has not yet decreased, increase maximum number of
-		% inner iterations
-		if(FctVal>=FctValOld)
+        % if functional value has not yet decreased, increase maximum number of
+        % inner iterations
+        if(FctVal>=FctValOld)
             if(verbose)
                 disp(['Functional has not decreased. Old: ',num2str(FctValOld,'%1.16f'),' - New: ',num2str(FctVal,'%1.16f'),'. Increasing number of inner iterations.']); 
             end
             pars.MAXITER=pars.MAXITER*2;
-        	if(pars.MAXITER>800) break; end
-			fold=foldback; 
-			FctOld=FctValOld;
-			FctVal=FctValOld;
-		else
-			fold = fnew;
-			FctValOuter=[FctValOuter,FctVal];
-			foldback=fold;
-			FctOld=FctValOld;
-			FctValOld = FctVal;
+            %pars.MAXITER=pars.MAXITER+min(pars.MAXITER,320);
+            if(pars.MAXITER>MAXITER_bound) break; end
+            fold=foldback; 
+            FctOld=FctValOld;
+            FctVal=FctValOld;
+        else
+            fold = fnew;
+            FctValOuter=[FctValOuter,FctVal];
+            foldback=fold;
+            FctOld=FctValOld;
+            FctValOld = FctVal;
+            if (counter>10)
+                MAXITER_bound=640;
+            elseif (counter>5)
+                MAXITER_bound=1280; % reduce the maximum number of iterations 
+            end
+            pars.MAXITER=min(pars.MAXITER,MAXITER_bound);    
         end
         
         if(verbose)
@@ -96,36 +111,34 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
             disp(['****Iter: ',num2str(counter),' - Functional: ',num2str(FctVal,'%1.16f'),'- CheegerBest: ',num2str(cheeger,'%1.14f'),' - DiffF: ',num2str(diffFunction,'%1.14f')]);
             disp([' ']);
         end
+        
+        % make sure we have <vec,1>=0
+        if (~normalized)
+            ixNull=find(fold==0); %ixNull=ixNull(randperm(length(ixNull)));
+            Pos=sum(fold>0);
+            Neg=sum(fold<0);
+            Null=length(ixNull);
+            fcur=sign(fold);
+            if(Null>0)
+                diffPosNeg=Pos-Neg;
+                fcur(ixNull)=-diffPosNeg/length(ixNull);
+            end
+            vec = fcur;
+        else
+            ixNull=find(fold==0); %ixNull=ixNull(randperm(length(ixNull)));
+            Pos=sum(deg(fold>0));
+            Neg=sum(deg(fold<0));
+            Null=sum(deg(ixNull));
+            fcur=deg.*sign(fold);
+            if(Null>0)
+                diffPosNeg=Pos-Neg;
+                fcur(ixNull)= -deg(ixNull)* diffPosNeg/Null;
+            end
+            vec = fcur;
+        end
 	  
-		% make sure we have <vec,1>=0
-		if (~normalized)
-		  ixNull=find(fold==0); %ixNull=ixNull(randperm(length(ixNull)));
-		  Pos=sum(fold>0);
-		  Neg=sum(fold<0);
-		  Null=length(ixNull);
-		  fcur=sign(fold);
-		  if(Null>0)
-			diffPosNeg=Pos-Neg;
-			fcur(ixNull)=-diffPosNeg/length(ixNull);
-		  end
-		  vec = fcur;
-		else
-		  ixNull=find(fold==0); %ixNull=ixNull(randperm(length(ixNull)));
-		  ixPos=find(fold>0);
-		  ixNeg=find(fold<0);
-		  Pos=sum(deg(ixPos));
-		  Neg=sum(deg(ixNeg));
-		  Null=sum(deg(ixNull));
-		  fcur=deg.*sign(fold);
-		  if(Null>0)
-            diffPosNeg=Pos-Neg;
-			fcur(ixNull)= -deg(ixNull)* diffPosNeg/Null;
-		  end
-		  vec = fcur;
-		end
-	  
-		% Solve inner problem
-		[fnew,rvalold,Obj,niter]=solveInnerProblem(W2,FctVal*full(vec),FctVal/FctOld*rvalold,pars.MAXITER,pars.epsilon,MaxSumSquaredWeights); % 
+        % Solve inner problem
+        [fnew,alphaold,Obj,niter]=solveInnerProblem(W2,FctVal*full(vec),FctVal/FctOld*alphaold,pars.MAXITER,pars.epsilon,MaxSumSquaredWeights); % 
         
         if (Obj==0) 
             fnew=fold;
@@ -147,25 +160,25 @@ function [fold,FctValOuter]=computeEigenvectorGeneral(W,fold,normalized,verbose,
             disp(['-- Original Obj: ',num2str(Obj2,'%1.16f'),' - Zeros: ',num2str(sum(fold==0)),' - Balance: ',num2str(sum(sign(fold)))]);
         end
         
-		% Subtract median
-		if (~normalized)
-			fnew = fnew - median(fnew);
-		else
-			fnew = fnew - weighted_median(fnew,deg);
-		end
-		fnew = fnew/norm(fnew,1);
+        % Subtract median
+        if (~normalized)
+            fnew = fnew - median(fnew);
+        else
+            fnew = fnew - weighted_median(fnew,deg);
+        end
+        fnew = fnew/norm(fnew,1);
 	 
-		diffFunction = min(norm(fnew-fold),norm(fnew+fold));
-		counter=counter+1;
-	end
+        diffFunction = min(norm(fnew-fold),norm(fnew+fold));
+        counter=counter+1;
+    end
 
 
-	% compute most recent Functional value
-	sval = wval.*abs(fnew(ix)-fnew(jx));
+    % compute most recent Functional value
+    sval = wval.*abs(fnew(ix)-fnew(jx));
     if(~normalized)
         FctVal = 0.5*sum(sval)/norm(fnew,1);
-	else
-		FctVal = 0.5*sum(sval)/(deg'*abs(fnew));
+    else
+        FctVal = 0.5*sum(sval)/(deg'*abs(fnew));
     end
     
     if(FctVal<FctValOld)

@@ -6,6 +6,12 @@ function [cutpart1,cutpart2] = computeCutValue(clusters,W,normalized,deg)
 % One then has Ratio/Normalized Cut = cutpart1 + cutpart2
 % and Ratio/Normalized Cheeger Cut = max(cutpart1,cutpart2)
 %
+%
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
 % (C)2010-11 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
