@@ -8,7 +8,7 @@ function [c,index] =  weighted_median(f,deg)
 % the Free Software Foundation, either version 3 of the License, or
 % (at your option) any later version.
 %
-% (C)2010-11 Thomas Buehler and Matthias Hein
+% (C)2010-18 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
@@ -28,5 +28,4 @@ function [c,index] =  weighted_median(f,deg)
     
     index = ix(ix2(ix3(1)));
     c = f(index);
-    
 end

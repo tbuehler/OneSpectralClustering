@@ -15,8 +15,8 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
 %                 initializations at each level
 %   crit_thresh - 1: Rcut/Ncut, 2: RCC/NCC
 %   crit_multi  - 1: Rcut/Ncut, 2: RCC/NCC
-%   verbosity   - Controls how much information is displayed. Levels 0-3,
-%                 default is 2.
+%   verbosity   - Controls how much information is displayed.
+%                 Levels 0 (silent) - 4 (very verbose).
 %
 % Output:
 %   clusters    - mx(k-1) matrix containing in each column the computed 
@@ -34,7 +34,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
 % the Free Software Foundation, either version 3 of the License, or
 % (at your option) any later version.
 %
-% (C)2010-11 Thomas Buehler and Matthias Hein
+% (C)2010-18 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
  
@@ -56,7 +56,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
     
     deg=full(sum(W,2)); %% will be needed in createSubClusters2 (also in unnormalized case)
     if normalized
-        deg2=deg;%full(sum(W));
+        deg2=deg;
     else
         deg2=ones(num,1);
     end
@@ -68,28 +68,28 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
     [comp,connected,sizes]=connectedComponents(W);
     if(~connected)
         if(verbosity>=1) disp('WARNING! GRAPH IS NOT CONNECTED!');end
-        if(verbosity>=2) disp('Optimal Cut achieved by separating connected components.');end
+        if(verbosity>=3) disp('Optimal Cut achieved by separating connected components.');end
         allClusters = balanceConnectedComponents(comp,sizes,W,normalized);
         [cut,cheeger,cutPart1,cutPart2,eigvec,lambda]=deal(0,0,0,0,zeros(length(allClusters),1),0);
     else
-        if(verbosity>=2) disp('Computing partitioning.'); end
+        if(verbosity>=3) disp('... Computing partitioning into 2 parts.'); end
         if(init2nd)
             % Computing (thresholded) second eigenvector of graph Laplacian.
-            if(verbosity>=2) disp('...Computing second eigenvector of standard graph Laplacian.'); end
-            [start,flag]=computeStandardEigenvector(W,normalized,deg,verbosity);
+            if(verbosity>=3) disp('...... Computing second eigenvector of standard graph Laplacian.'); end
+            [start,eigval,flag]=computeStandardEigenvector(W,normalized,deg,verbosity);
             if(flag) % if eigenvector computation succeeded
                 start = createClustersGeneral(start,W,normalized,threshold_type,crit_thresh,deg2,false);
                 if (sum(start)>sum(start==0)) start=1-start; end
                 start=start/sum(start);
     
                 % Computing partitioning initialized with second eigenvector.
-                if(verbosity>=2) disp(['...Computing nonlinear eigenvector of graph 1-Laplacian. ',...
-                    'Initialization with second eigenvector of standard graph Laplacian.']);  end
-                [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
+                if(verbosity>=3) disp(['...... Computing nonlinear eigenvector of graph 1-Laplacian. ',...
+                    'Initialization with standard eigenvector.']);  end
+                [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,crit_thresh,verbosity>=4);
                 [allClusters, cut,cheeger,cutPart1,cutPart2] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,false);
 
                 % Display current objective
-                if(verbosity>=2) displayCurrentObjective(cut,cheeger,normalized); end
+                if(verbosity>=3) fprintf('...... %s',displayCurrentObjective(cut,cheeger,normalized)); end
                 
                 eigvec=vmin;
                 lambda=fval(end);
@@ -101,13 +101,13 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
 
         % Computing partitioning with random initializations
         for l=1:numTrials
-            if(verbosity>=2) fprintf('...Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d.\n',l,numTrials); end
+            if(verbosity>=3) fprintf('...... Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d.\n',l,numTrials); end
             start=randn(num,1);
-            [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,verbosity>=3);
+            [vmin,fval]=computeEigenvectorGeneral(W,start,normalized,crit_thresh,verbosity>=4);
             [allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp] =  createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,false);
 
             % Display current objective
-            if(verbosity>=2) displayCurrentObjective(cut_temp,cheeger_temp,normalized); end
+            if(verbosity>=3) fprintf('...... %s',displayCurrentObjective(cut_temp,cheeger_temp,normalized)); end
 
             % Check if we're better
             if ((crit_thresh==1 && cut_temp<cut) || (crit_thresh==2 && cheeger_temp<cheeger))
@@ -132,14 +132,15 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
     subCutParts=zeros(k,2);
     subClusters=cell(1,k);
 
-    if(verbosity>=1)
-        fprintf('Finished Clustering into 2 parts.\n');
-        displayCurrentObjective(cut,cheeger,normalized);
-        fprintf('\n');
+    if(verbosity>=3)
+        fprintf('...... Finished Clustering into 2 parts.\n');
+        fprintf('...... %s',displayCurrentObjective(cut,cheeger,normalized));
     end
     
     %Perform the 2nd to (k-1)th partitioning step
     for l=3:k
+        if(verbosity>=3) fprintf('... Computing partitioning into %d parts.\n',l); end
+
         bestCut=inf;
         bestCheeger=inf;
         % in each step consider each of the current l-1 clusters
@@ -174,14 +175,14 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                 subCutParts(m,1:2)=[cutPart1 cutPart2];    
             % otherwise we have to compute the partition
             else    
-                if(verbosity>=2) fprintf('Computing partitioning of subgraph %d.\n',m);end
+                if(verbosity>=3) fprintf('...... Checking partitioning of subgraph %d.\n',m);end
                 
                 % extract subgraph and its connected components
                 Wm=W(index_m,index_m);
                 size_m=size(Wm,1);
                 [comp,connected,sizes]=connectedComponents(Wm);
                 
-                if(verbosity>=2 && ~connected) disp('...Subgraph is not connected.'); end
+                if(verbosity>=3 && ~connected) disp('...... Subgraph is not connected.'); end
                 cutPart1=inf;
                 cutPart2=inf;
                 
@@ -193,7 +194,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                     for m1=1:length(sizes)   
                         %if(true)
                         if(cutPart1+cutPart2>0)
-                            if(verbosity>=2) fprintf('...Checking partition found by isolating connected component %d of %d.\n',m1,length(sizes)); end
+                            if(verbosity>=3) fprintf('...... Checking partition found by isolating connected component %d of %d.\n',m1,length(sizes)); end
 
                             allClustersInCluster_m_temp = double(comp==m1);
 
@@ -206,9 +207,9 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                             cutPart1_temp = computeCutValue(cluster_m1,W,normalized,deg2); 
 
                             % Display current objective
-                            if(verbosity>=2) 
+                            if(verbosity>=3) 
                                 [cut_temp,cheeger_temp]=computeCutCheeger(cutParts,cutPart1_temp,cutPart2_temp,m,l);
-                                displayCurrentObjective(cut_temp,cheeger_temp,normalized); 
+                                fprintf('...... %s',displayCurrentObjective(cut_temp,cheeger_temp,normalized)); 
                             end
 
                             %Check if we're better						
@@ -231,7 +232,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                             if(2*max(sum(Wm_comp.^2))<eps)
                                 Wm_comp2=Wm_comp/max(max(Wm_comp));
                             end
-                            if(~connected && verbosity>=2) fprintf('...Computing partitioning of connected component %d of %d of subgraph %d.\n',m1,length(sizes), m); end
+                            if(~connected && verbosity>=3) fprintf('...... Computing partitioning of connected component %d of %d of subgraph %d.\n',m1,length(sizes), m); end
                             if (~connected)
                                 index_rest=find(comp~=m1); % all other components in the current cluster
                                 cut_rest=sum(sum(W(index_m(index_rest),setdiff(1:num,index_m(index_rest)))));
@@ -243,8 +244,8 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                             % Computing partitioning initialized with second eigenvector.
                             if(init2nd)
                                 % Computing (thresholded) second eigenvector of graph Laplacian.
-                                if(verbosity>=2) disp('...Computing second eigenvector of standard graph Laplacian.'); end
-                                [start_comp, flag]=computeStandardEigenvector(Wm_comp,normalized,deg(index_m(index_comp)),verbosity);
+                                if(verbosity>=3) disp('...... Computing second eigenvector of standard graph Laplacian.'); end
+                                [start_comp, eigval, flag]=computeStandardEigenvector(Wm_comp,normalized,deg(index_m(index_comp)),verbosity);
                                 if(flag)
                                     start_m =  createSubClusters2(start_comp,Wm_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m);
                                     start_comp=start_m(index_comp);
@@ -253,15 +254,15 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                                     start_comp=start_comp/sum(start_comp);
 
                                     % Computing partitioning initialized with second eigenvector.
-                                    if(verbosity>=2) disp(['...Computing nonlinear eigenvector of graph 1-Laplacian. ', ...
-                                        'Initialization with second eigenvector of standard graph Laplacian.']); end
-                                    vmin_comp=computeEigenvectorGeneral(Wm_comp2,start_comp,normalized,verbosity>=3);
+                                    if(verbosity>=3) disp(['...... Computing nonlinear eigenvector of graph 1-Laplacian. ', ...
+                                        'Initialization with standard eigenvector.']); end
+                                    vmin_comp=computeEigenvectorGeneral(Wm_comp2,start_comp,normalized,crit_thresh,verbosity>=4);
                                     [allClustersInCluster_m_temp, cutPart1_temp, cutPart2_temp] =  createSubClusters2(vmin_comp,Wm_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m);
 
                                     % Display current objective
-                                    if(verbosity>=2) 
+                                    if(verbosity>=3) 
                                         [cut_temp,cheeger_temp]=computeCutCheeger(cutParts,cutPart1_temp,cutPart2_temp,m,l);
-                                        displayCurrentObjective(cut_temp,cheeger_temp,normalized); 
+                                        fprintf('...... %s',displayCurrentObjective(cut_temp,cheeger_temp,normalized)); 
                                     end
                                 else
                                     cutPart1_temp=inf;
@@ -279,13 +280,13 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                             for k=1:numTrials
 
                                 %Computing partitioning with random initializations
-                                if(verbosity>=2) fprintf('...Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d. \n',k,numTrials); end
+                                if(verbosity>=3) fprintf('...... Computing nonlinear eigenvector of graph 1-Laplacian. Random initialization %d of %d. \n',k,numTrials); end
                                 start_comp=randn(size(Wm_comp,1),1);
-                                vmin_comp=computeEigenvectorGeneral(Wm_comp2,start_comp,normalized,verbosity>=3);
+                                vmin_comp=computeEigenvectorGeneral(Wm_comp2,start_comp,normalized,crit_thresh,verbosity>=4);
                                 [allClustersInCluster_m_temp, cutPart1_temp, cutPart2_temp] =  createSubClusters2(vmin_comp,Wm_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m);
 
                                 % Display current objective
-                                if(verbosity>=2) 
+                                if(verbosity>=3) 
                                     [cut_temp,cheeger_temp]=computeCutCheeger(cutParts,cutPart1_temp,cutPart2_temp,m,l);
                                     displayCurrentObjective(cut_temp,cheeger_temp,normalized); 
                                 end
@@ -307,10 +308,9 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             
             % print out best cut possible by partitioning of current subgraph
             [cut,cheeger]=computeCutCheeger(cutParts,cutPart1,cutPart2,m,l);
-            if(verbosity>=2)
-                fprintf('Best result achievable by partitioning of subgraph %d:\n',m);
-                displayCurrentObjective(cut,cheeger,normalized);
-                fprintf('\n');
+            if(verbosity>=3)
+                fprintf('...... Best result achievable by partitioning of subgraph %d:\n',m);
+                fprintf('...... %s',displayCurrentObjective(cut,cheeger,normalized));
             end
             
             % check if partitoning of the current subgraph gives better cut
@@ -352,10 +352,9 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
         subClusters{l}= [];
           
         % Print out current objective
-        if(verbosity>=1)
-            fprintf('Decided to partition subgraph %d. Finished Clustering into %d parts.\n',best_m,l);
-            displayCurrentObjective(bestCut,bestCheeger,normalized);
-            fprintf('\n');
+        if(verbosity>=3)
+            fprintf('...... Finished Clustering into %d parts (decided to partition subgraph %d).\n',l, best_m);
+            fprintf('...... %s',displayCurrentObjective(bestCut,bestCheeger,normalized));
         end
     end
 end
@@ -370,66 +369,35 @@ function [cut,cheeger]=computeCutCheeger(cutParts,cutPart1,cutPart2,m,l)
 end
 
 
-% Computes the thresholded 2nd eigenvector of the standard graph Laplacian
-function [start,flag]=computeStandardEigenvector(W,normalized,deg,verbosity)
-
-    % deg has to be the degree vector (also in unnormalised case)
-    num=size(W,1);
-    D=spdiags(deg,0,num,num);
-    opts.disp=0;
-    opts.tol = 1E-10;
-    %opts.maxit=20;
-    %opts.issym = 1;
-    
-    flag=true;
-    try
-        if (normalized)
-            [eigvec,eigval]= eigs(D-W, D,2,'SA',opts);
-        else
-            [eigvec,eigval]= eigs(D-W, 2,'SA',opts);
-        end
-        start=eigvec(:,2);
-    catch exc
-        flag=false;
-        if(verbosity>=1) 
-            disp('WARNING! COMPUTATION OF SECOND EIGENVECTOR OF THE STANDARD GRAPH LAPLACIAN NOT SUCESSFUL!');
-            disp(exc.message);
-        end
-        start=zeros(num,1);
-    end   
-end
-
-
 % Displays the current objective value
-function displayCurrentObjective(cut_temp,cheeger_temp,normalized)
+function objective = displayCurrentObjective(cut_temp,cheeger_temp,normalized)
     
     if (normalized)
-        fprintf('...Normalized Cut: %.8g   Normalized Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
+        objective = sprintf('Normalized Cut: %.8g - Normalized Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
     else
-        fprintf('...Ratio Cut: %.8g   Ratio Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
+        objective = sprintf('Ratio Cut: %.8g - Ratio Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
     end
     
 end
 
 
 % Creates two clusters by thresholding the vector vmin_comp obtained on a
-% connected component of a subgraph. Given the two clusters on the 
-% connected component, there are two ways of constructing the final clusters 
-% on the subgraph, as we can keep each of the clusters on the connected 
-% component as cluster and merge the other one with the remaining connected 
-% components. The method takes the one yielding the lower Cut/Cheeger.
+% connected component of a subgraph. Given the two clusters A and B on the 
+% connected component, we consider two different ways of dealing with
+% the remaining connected components C of the subgraph: the first is to 
+% merge C with A, the second to merge C with B. The method takes the one 
+% yielding the lower Cut/Cheeger cut.
 function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_comp,W_comp,normalized,deg,crit_thresh,index_comp,index_m,cut_rest,size_rest,size_m)
       
     % input parameter deg has to be the degree vector (also in unnormalised case)
-    %deg=full(sum(W));
-    %Make deg a row vector;
+    % deg=full(sum(W));
+    % Make deg a row vector;
     if (size(deg,1)>1) 
         deg=deg';
     end
-        
+    
+    connected = (cut_rest==0 && size_rest==0);
     [vminM_sorted, index]=sort(vmin_comp);
-    [vminU,indexU]=unique(vminM_sorted,'last');
-
     W_sorted=W_comp(index,index);
 
     % calculate cuts
@@ -444,53 +412,61 @@ function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_c
     tempcuts_threshold(tempcuts_threshold<0)=0;
     tempcuts_threshold2(tempcuts_threshold2<0)=0;
 
-    tempcuts_threshold=tempcuts_threshold(indexU);
-    tempcuts_threshold2=tempcuts_threshold2(indexU);
-    volumes_threshold=volumes_threshold(indexU);
-
     % divide by size/volume
     if(normalized)
+        % those are the cuts obtained by merging A with C
         cutparts1_threshold=(tempcuts_threshold(1:end-1)+cut_rest)./(volumes_threshold(1:end-1)+size_rest);
         cutparts1_threshold(isnan(cutparts1_threshold))=0;
         cutparts2_threshold=tempcuts_threshold2(1:end-1)./(volumes_threshold(end)-volumes_threshold(1:end-1));
         cutparts2_threshold(isnan(cutparts2_threshold))=0;
 
-        cutparts1b_threshold=tempcuts_threshold(1:end-1)./volumes_threshold(1:end-1);
-        cutparts1b_threshold(isnan(cutparts1b_threshold))=0;
-        cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((volumes_threshold(end)-volumes_threshold(1:end-1))+size_rest);
-        cutparts2b_threshold(isnan(cutparts2b_threshold))=0;
+        if (~connected) % only do this if C is not empty
+            % those are the cuts obtained by merging B with C
+            cutparts1b_threshold=tempcuts_threshold(1:end-1)./volumes_threshold(1:end-1);
+            cutparts1b_threshold(isnan(cutparts1b_threshold))=0;
+            cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((volumes_threshold(end)-volumes_threshold(1:end-1))+size_rest);
+            cutparts2b_threshold(isnan(cutparts2b_threshold))=0;
+        end
     else
-        sizes_threshold=cumsum(ones(1,size(vmin_comp,1)-1));
-        sizes_threshold=sizes_threshold(indexU(1:end-1));
+        % those are the cuts obtained by merging A with C
+        sizes_threshold=cumsum(ones(1,size(vmin_comp,1)));
+        sizes_threshold=sizes_threshold(1:end-1);
         cutparts1_threshold=(tempcuts_threshold(1:end-1)+cut_rest)./(sizes_threshold+size_rest);
         cutparts2_threshold=tempcuts_threshold2(1:end-1)./(size(vmin_comp,1)-sizes_threshold);
 
-        cutparts1b_threshold=tempcuts_threshold(1:end-1)./sizes_threshold;
-        cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((size(vmin_comp,1)-sizes_threshold)+size_rest);
+        if (~connected) % only do this if C is not empty
+            % those are the cuts obtained by merging B with C 
+            cutparts1b_threshold=tempcuts_threshold(1:end-1)./sizes_threshold;
+            cutparts2b_threshold=(tempcuts_threshold2(1:end-1)+cut_rest)./((size(vmin_comp,1)-sizes_threshold)+size_rest);
+        end
     end
 
     %calculate total cuts
     if(crit_thresh==1)
         cuts_threshold=cutparts1_threshold+cutparts2_threshold;
         [cut1,threshold_index]=min(cuts_threshold);
-
-        cuts_threshold_b=cutparts1b_threshold+cutparts2b_threshold;
-        [cut1b,threshold_index_b]=min(cuts_threshold_b);
-
         comp_case=1;
-        if (cut1b<cut1) 
-            comp_case=2;
+        
+        if (~connected)
+            cuts_threshold_b=cutparts1b_threshold+cutparts2b_threshold;
+            [cut1b,threshold_index_b]=min(cuts_threshold_b);
+        
+            if (cut1b<cut1) 
+                comp_case=2;
+            end
         end
     else
         cheegers_threshold=max(cutparts1_threshold,cutparts2_threshold);
         [cheeger1,threshold_index]=min(cheegers_threshold);
-
-        cheegers_threshold_b=max(cutparts1_threshold,cutparts2_threshold);
-        [cheeger1b,threshold_index_b]=min(cheegers_threshold_b);
-
         comp_case=1;
-        if (cheeger1b<cheeger1) 
-            comp_case=2;
+        
+        if (~connected)
+            cheegers_threshold_b=max(cutparts1_threshold,cutparts2_threshold);
+            [cheeger1b,threshold_index_b]=min(cheegers_threshold_b);
+        
+            if (cheeger1b<cheeger1) 
+                comp_case=2;
+            end
         end
     end
 
@@ -498,16 +474,18 @@ function [allClustersInClusterM, cutPart1,cutPart2] =  createSubClusters2(vmin_c
         cutPart1=cutparts1_threshold(threshold_index);
         cutPart2=cutparts2_threshold(threshold_index);
 
-        allClustersInClusterM_comp= (vmin_comp>vminU(threshold_index));
-
+        allClustersInClusterM_comp = ones(length(vmin_comp), 1);
+        allClustersInClusterM_comp(index(1:threshold_index)) = 0;
+        
         allClustersInClusterM= zeros(size_m,1);
         allClustersInClusterM(index_comp)=allClustersInClusterM_comp;
     else
         cutPart1=cutparts1b_threshold(threshold_index_b);
         cutPart2=cutparts2b_threshold(threshold_index_b);
-
-        allClustersInClusterM_comp= (vmin_comp>vminU(threshold_index_b));
-
+        
+        allClustersInClusterM_comp = ones(length(vmin_comp), 1);
+        allClustersInClusterM_comp(index(1:threshold_index_b)) = 0;
+  
         allClustersInClusterM= ones(size_m,1);
         allClustersInClusterM(index_comp)=allClustersInClusterM_comp;
     end
@@ -518,8 +496,7 @@ end
 % roughly the same cardinality/volume
 function comp2 = balanceConnectedComponents(comp,sizes,W,normalized)
 
-    % for normalized variant, compute the volume for every connected
-    % component
+    % for normalized variant, compute volume for every connected component
     if(normalized)
         deg=sum(W);
         volumes=zeros(length(sizes),1);
@@ -538,7 +515,8 @@ function comp2 = balanceConnectedComponents(comp,sizes,W,normalized)
         if(size_a<=size_b) 
             size_a=size_a+sizes_sort(l);
             ind_a=[ind_a ind(l)];
-        else size_b=size_b+sizes_sort(l);
+        else
+            size_b=size_b+sizes_sort(l);
         end
     end
     comp2=double(ismember(comp,ind_a));

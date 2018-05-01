@@ -1,4 +1,4 @@
-function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criterion,k,numOuter,numInner,verbosity)
+function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criterion,k,numRuns,verbosity)
 % Performs 1-Spectral Clustering as described in the paper
 %
 % M. Hein and T. Bühler
@@ -6,11 +6,8 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
 % In Advances in Neural Information Processing Systems 23 (NIPS 2010)
 % Available online at http://arxiv.org/abs/1012.0774
 %
-% Usage, fast version:	
-%    [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k);
-% Usage, slower version, but improved partitioning (recommended):
-%    [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter,numInner);
-%    [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numOuter,numInner,verbosity);
+% Usage:	
+%    [clusters,cuts,cheegers] = OneSpectralClustering(W,criterion,k,numRuns,verbosity);
 %
 % Input: 
 %   W           - Sparse weight matrix. Has to be symmetric.
@@ -23,12 +20,10 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
 %   k           - number of clusters
 %
 % Input(optional):
-%   numOuter    - number of additional times the multipartitioning scheme
-%                 is performed (default is 0); 
-%   numInner    - for the additional runs of the multipartitioning scheme: 
-%                 number of random initializations at each level (default is 0).
-%   verbosity   - Controls how much information is displayed. Levels 0-3,
-%                 default is 2.
+%   numRuns     - number of additional times the multipartitioning scheme
+%                 is performed with random initializations (default is 10). 
+%   verbosity   - Controls how much information is displayed. 
+%                 Levels 0 (silent) - 4 (very verbose), default is 2.
 %
 % Output:
 %   clusters    - mx(k-1) matrix containing in each column the computed
@@ -40,17 +35,9 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
 %   eigvec      - mx1 vector containing the second eigenvector of the 1-Laplacian
 %   lambda      - corresponding eigenvalue
 %
-%
-% If no additional parameters are specified, the multipartitioning scheme
-% is performed once, where each subpartitioning problem is initialized with
-% the second eigenvector of the standard graph Laplacian (fast version).
 % 
-% The quality of the obtained partitioning can be improved by performing 
-% additional runs of the multipartitioning scheme (parameter numOuter)
-% with multiple random initializations at each level (parameter numInner).
-%
 % The final clustering is obtained via clusters(:,end), the corresponding 
-% cut/cheeger values via cuts(end), cheegers(end).
+% cut/Cheeger cut values via cuts(end), cheegers(end).
 %
 % If more flexibility is desired (e.g. turn off second eigenvector 
 % initialization, uncouple multicut-criterion from thresholding criterion), 
@@ -62,23 +49,22 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
 % the Free Software Foundation, either version 3 of the License, or
 % (at your option) any later version.
 % 
-% (C)2010-11 Thomas Buehler and Matthias Hein
+% (C)2010-18 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
-    if(nargin<6)
+    if(nargin<5)
         verbosity=2;
     end
     if (nargin< 4)
-        numOuter=0;
-        numInner=0;
+        numRuns=10;
     end
     
     assert(k>=2,'Wrong usage. Number of clusters has to be at least 2.');
     assert(k<=size(W,1), 'Wrong usage. Number of clusters is larger than size of the graph.');
     assert(isnumeric(W) && issparse(W),'Wrong usage. W should be sparse and numeric.');
     assert(sum(sum(W~=W'))==0,'Wrong usage. W should be symmetric.');
-    assert(~(numOuter>0 && numInner==0), sprintf('Wrong usage. numOuter=%d but numInner=%d. numInner has to be positive.',numOuter,numInner));
+    assert(numRuns>=0, 'Wrong usage. numRuns has to be non-negative.');
     
     switch(lower(criterion))
         case 'ncut'    
@@ -106,28 +92,27 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
         end
         fprintf('Optimization criterion: %s\n',critstring);
         fprintf('Number of clusters: %d\n',k);
-        tempstring='Performing 1 run initialized with second eigenvector of standard graph Laplacian';
-        if (numOuter==0)
-            fprintf(strcat(tempstring,'.\n'));
+        tempstring='Number of runs: 1 (second eigenvector initialization)';
+        if (numRuns==0)
+            fprintf(strcat(tempstring,'.'));
         else
-            if(numOuter==1)
-                fprintf(strcat(tempstring,'\nand 1 additional run with random initializations. '));
-            else
-                fprintf(strcat(tempstring,sprintf('\nand %d additional runs with random initializations. ',numOuter)));
-            end
-            fprintf(' Number of random initializations: %d \n ',numInner);
+            fprintf(strcat(tempstring,sprintf(' + %d (random initialization). ',numRuns)));
         end
         fprintf('\n');
     end
 
-    if (verbosity>=1 && numOuter>0) fprintf('STARTING RUN WITH SECOND EIGENVECTOR INITIALIZATION.\n'); end;
+    if (verbosity>=3 && numRuns>0) fprintf('Starting run with second eigenvector initialization.\n'); end;
         
     try
         [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,normalized,k,true,0,criterion_inner,criterion_inner,verbosity);
+
+        if (verbosity >=2)
+            fprintf('Result (eigenvector): %s',  displayCurrentObjective(cuts(end), cheegers(end), normalized));
+        end
     catch exc
         %disp(exc.identifier);
         if (strcmp(exc.identifier,'OneSpect:cutinf'))
-            if (numOuter>0)
+            if (numRuns>0)
                 cuts=inf;
                 cheegers=inf;
                 fprintf(strcat('WARNING!\t',exc.message,'\n'));
@@ -147,10 +132,14 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
         end
     end
     
-    for l=1:numOuter
-        if (verbosity>=1) fprintf('STARTING RUN WITH RANDOM INITIALIZATIONS %d OF %d.\n', l,numOuter); end;
+    for l=1:numRuns
+        if (verbosity>=3) fprintf('Starting run with random initialization %d of %d.\n',l,numRuns); end;
         
-        [clusters_temp,cuts_temp,cheegers_temp,eigvec_temp,lambda_temp] = computeMultiPartitioning(W,normalized,k,false,numInner,criterion_inner,criterion_inner,verbosity);
+        [clusters_temp,cuts_temp,cheegers_temp,eigvec_temp,lambda_temp] = computeMultiPartitioning(W,normalized,k,false,1,criterion_inner,criterion_inner,verbosity);
+        
+        if (verbosity >=2)
+            fprintf('Result (random %d of %d): %s', l, numRuns, displayCurrentObjective(cuts_temp(end), cheegers_temp(end), normalized));
+        end
 
         % if the final cut/cheeger cut is better according to the given
         % criterion, take this partition
@@ -165,13 +154,19 @@ function [clusters,cuts,cheegers,eigvec,lambda] = OneSpectralClustering(W,criter
         
     end
 
-    fprintf('Best result:\n');
-    if (normalized)
-        fprintf('Normalized Cut: %.8g   Normalized Cheeger Cut: %.8g\n',cuts(end),cheegers(end)); 
-    else
-        fprintf('Ratio Cut: %.8g   Ratio Cheeger Cut: %.8g\n',cuts(end),cheegers(end)); 
+    if (verbosity >=1)
+        fprintf('Best result: %s', displayCurrentObjective(cuts(end), cheegers(end), normalized));
     end
-
 end
     
-            
+
+% Displays the current objective value
+function objective = displayCurrentObjective(cut_temp,cheeger_temp,normalized)
+    
+    if (normalized)
+        objective = sprintf('Normalized Cut: %.8g - Normalized Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
+    else
+        objective = sprintf('Ratio Cut: %.8g - Ratio Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
+    end
+    
+end          

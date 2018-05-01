@@ -6,7 +6,6 @@ nonlinear eigenproblems is used to compute a non-constant eigenvector
 of the graph 1-Laplacian, which then yields a bipartition of the graph. 
 A multipartitioning is then obtained using a recursive splitting scheme.
 
-Current version: V1.1
 
 
 
@@ -23,37 +22,27 @@ in the matlab command line.
 
 ## Usage
 
-    [clusters,cuts,cheegers] = OneSpectralClustering(W,crit,k,numOuter,numInner,verbosity);
+    [clusters,cuts,cheegers] = OneSpectralClustering(W,crit,k,numRuns,verbosity);
 
 #### Input 
     
     W            Sparse weight matrix. Has to be symmetric.
-    crit         The multipartition criterion to be optimized. Available 
-                 choices are
+    crit         The multipartition criterion to be optimized.
+                 Available choices are
                         'ncut' - Normalized Cut, 
-                        'ncc' - Normalized Cheeger Cut,
+                        'ncc'  - Normalized Cheeger Cut,
                         'rcut' - Ratio Cut, 
-                        'rcc' - Ratio Cheeger Cut
+                        'rcc'  - Ratio Cheeger Cut
     k            number of clusters
 
 
 #### Input (optional)
 
-If no additional parameters are specified, the multipartitioning scheme
-is performed once, where each subpartitioning problem is initialized with
-the second eigenvector of the standard graph Laplacian.
+    numRuns     - number of additional times the multipartitioning scheme
+                  is performed with random initializations (default is 10). 
+    verbosity   - Controls how much information is displayed. 
+                  Levels 0 (silent) - 4 (very verbose), default is 2.
 
-The quality of the obtained partitioning can be improved by performing 
-additional runs of the multipartitioning scheme (parameter numOuter)
-with multiple random initializations at each level (parameter numInner).
-
-
-    numOuter    number of additional times the multipartitioning scheme is 
-                performed (default is 0); 
-    numInner    for the additional runs of the multipartitioning scheme: 
-                number of random initializations at each level (default is 0).
-    verbosity   Controls how much information is displayed. (Levels 0-3,
-                default is 2).
 
 #### Output
     
@@ -65,7 +54,7 @@ with multiple random initializations at each level (parameter numInner).
                 values after each partitioning step.
 
 The final clustering is obtained via clusters(:,end), the corresponding 
-cut/cheeger values via cuts(end), cheegers(end).
+cut/Cheeger cut values via cuts(end), cheegers(end).
 
 
 
@@ -102,7 +91,6 @@ applications in 1-spectral clustering and sparse PCA".
 
 ## Contact
 
-Copyright 2010-11 Thomas Bühler and Matthias Hein
-(tb/hein@cs.uni-saarland.de). 
+Copyright 2010-18 Thomas Bühler and Matthias Hein
 Machine Learning Group, Saarland University, Germany
 (http://www.ml.uni-saarland.de).

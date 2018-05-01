@@ -6,7 +6,7 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// Copyright 2010-15 Thomas Bühler and Matthias Hein
+// Copyright 2010-18 Thomas Bühler and Matthias Hein
 // Machine Learning Group, Saarland University, Germany
 // http://www.ml.uni-saarland.de
 #include <math.h>
@@ -166,5 +166,4 @@ void mexFunction(int nlhs, mxArray *plhs[],
  FinalIter[0]=iter;
 
  delete[] D; delete[] Dold; delete[] betaold; delete[] beta;
-  
 }
