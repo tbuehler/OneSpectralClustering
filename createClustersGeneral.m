@@ -31,7 +31,7 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
 % the Free Software Foundation, either version 3 of the License, or
 % (at your option) any later version.
 %
-% Copyright 2010-15 Thomas Bühler and Matthias Hein
+% Copyright 2010-18 Thomas Bühler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 	
@@ -53,11 +53,10 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
     end
 
    	
-    if thresh_type>=0
+    if thresh_type>=0 && thresh_type<3
         threshold= determineThreshold(thresh_type,vmin);
-        %allClusters= computeClusterIndicatorFunction(vmin,threshold);
         allClusters= (vmin>threshold);
-        [cutPart1,cutPart2] = computeCutValue(allClusters,W,normalized); %cutPart1: vmin<threshold, cutPart2: vmin>threshold
+        [cutPart1,cutPart2] = computeCutValue(allClusters,W,normalized); 
         cut=cutPart1+cutPart2;
         cheeger=max(cutPart1,cutPart2);
     else
@@ -88,7 +87,7 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
             
         % also thresholds within regions of same value
         if (~notinsreg)
-            
+           
             % find best cut/cheeger
             if(criterion==1)
                 [cut,threshold_index]=min(cuts_threshold);
@@ -116,8 +115,6 @@ function [allClusters, cut,cheeger,cutPart1,cutPart2,threshold] =  createCluster
             threshold=vmin_sorted(threshold_index);
         else
             % don't threshold within regions of same value
-
-            %[vminU,indexU]=unique(vmin_sorted(1:end-1));% unique gives index of last occurence
             [vminU,indexU]=unique(vmin_sorted,'last');% unique gives index of last occurence
             vminU=vminU(1:end-1); indexU=indexU(1:end-1); 
 
