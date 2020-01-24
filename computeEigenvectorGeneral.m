@@ -65,7 +65,7 @@ function [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,
         if (crit<3)
             [ac, cut, cheeger] = createClustersGeneral(fold, W, normalized, -1, crit, deg);
         else 
-            [ac, cheeger] = opt_thresh_vertex_expansion(x, params, normalized);
+            [ac, cheeger] = opt_thresh_vertex_expansion(fold, W, normalized);
             cut = cheeger;
         end
         fprintf('......... Init - Functional: %.14g - CutBest: %.14g - CheegerBest: %.14g\n', ...
@@ -99,7 +99,7 @@ function [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,
             if (crit<3)
                 [ac,cut,cheeger] = createClustersGeneral(fold,W,normalized,-1,crit,deg);
             else 
-                [ac, cheeger] = opt_thresh_vertex_expansion(x, params, normalized);
+                [ac, cheeger] = opt_thresh_vertex_expansion(fold, W, normalized);
                 cut = cheeger;
             end
             fprintf('......... Iter: %d - Functional: %.14g - CutBest: %.14g - CheegerBest: %.14g - DiffF: %.14g\n', ...
@@ -112,7 +112,7 @@ function [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,
        if (crit<3)
            [ac, cut, cheeger] = createClustersGeneral(fold, W, normalized, -1, crit, deg);
        else 
-           [ac, cheeger] = opt_thresh_vertex_expansion(x, params, normalized);
+           [ac, cheeger] = opt_thresh_vertex_expansion(fold, W, normalized);
            cut = cheeger;
        end
        fprintf('......... Final result: Functional: %.16g  - Cut: %.14g - Cheeger Cut : %.14g \n', ...
@@ -133,8 +133,7 @@ function [fnew, subgrad_new, FctValNew, counter, diffFunction, alphaold, maxiter
         params.W = W;
         eps1 = 1E-3;
         obj_subg = @(x,params) (obj_subg_vertex_exp(x,params));
-        verbose=true;
-        [fnew,Obj,cur_delta,it,toc1] = ip_bundle(start, params, eps1, 'bundle_level', verbose, obj_subg);
+        [fnew, Obj, it, toc1] = ip_bundle(start, params, eps1, 'bundle_level', verbose, obj_subg);
     else
         epsilon = 1E-14; 
         % solve inner problem
@@ -146,12 +145,14 @@ function [fnew, subgrad_new, FctValNew, counter, diffFunction, alphaold, maxiter
     if ((crit==3 && Obj>-1E-11) || (crit<3 && Obj==0))
         fnew = fold;
         counter = maxiter;
+    else
+        counter = counter+1;
     end
 
     % print value of inner objective 
     if(verbose)
         if (crit==3)
-           fprintf('......... Objective Bundle method: %.14g - time: %.14g - it: %d\n', ...
+           fprintf('......... Inner Problem - Final Obj: %.14g - time: %.14g - it: %d\n', ...
                    Obj, toc1, it);
         else
             fprintf('......... Inner Problem - Final Obj: %.16g  - Number of Iterations: %d \n', ...
@@ -168,7 +169,6 @@ function [fnew, subgrad_new, FctValNew, counter, diffFunction, alphaold, maxiter
     fnew = performCentering(fnew, normalized, deg);
     fnew = fnew/norm(fnew,1);
     diffFunction = min(norm(fnew-fold), norm(fnew+fold));
-    counter = counter+1;
 
     % compute current functional value and subgradient of denominator
     [FctValNew, subgrad_new] = evaluateFunctional(fnew, wval, ix, jx, normalized, deg, crit, W);
@@ -224,8 +224,7 @@ function [FctVal, subgrad] = evaluateFunctional(f, wval, ix, jx, normalized, deg
         R = 0.5*sum(sval);
     else
         num = length(f);
-        params.W = W;
-        [RCk_sort,sort_ind] = thresholds_vertex_cut_fast(f,params);
+        [RCk_sort,sort_ind] = thresholds_vertex_cut_fast(f, W);
         RCk_sort_shift = [RCk_sort(2:end); 0];
 
         subg = zeros(num,1);

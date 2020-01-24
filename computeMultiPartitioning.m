@@ -84,8 +84,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                 if(crit_thresh<3)
                     start = createClustersGeneral(start,W,normalized,threshold_type,crit_thresh,deg2,false);
                 else
-                    params.W = W;
-                    [start,cheeg_temp] = opt_thresh_vertex_expansion(start,params,normalized);
+                    [start,cheeg_temp] = opt_thresh_vertex_expansion(start, W, normalized);
                 end
                 if (sum(start)>sum(start==0)) start = 1-start; end
                 start = start/sum(start);
@@ -98,8 +97,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
                 if (crit_thresh<3)
                     [allClusters, cut, cheeger, cutPart1, cutPart2] = createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,false);
                 else
-                    params.W = W;
-                    [allClusters, cheeger] = opt_thresh_vertex_expansion(vmin,params,normalized);
+                    [allClusters, cheeger] = opt_thresh_vertex_expansion(vmin, W, normalized);
                     cut = cheeger; % all this stuff is not used currently
                     cutPart1 = cheeger;
                     cutPart2 = cheeger;
@@ -125,8 +123,7 @@ function [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,nor
             if (crit_thresh<3)
                 [allClusters_temp, cut_temp,cheeger_temp,cutPart1_temp,cutPart2_temp] = createClustersGeneral(vmin,W,normalized,threshold_type,crit_thresh,deg2,false);
             else
-                params.W = W;
-                [allClusters_temp, cheeger_temp] = opt_thresh_vertex_expansion(vmin,params,normalized);
+                [allClusters_temp, cheeger_temp] = opt_thresh_vertex_expansion(vmin, W, normalized);
                 cut_temp = cheeger_temp; % all this stuff is not used currently
                 cutPart1_temp = cheeger_temp;
                 cutPart2_temp = cheeger_temp;

@@ -1,4 +1,4 @@
-function [clusters, vertex_exp] = opt_thresh_vertex_expansion(x,params,normalized)
+function [clusters, vertex_exp] = opt_thresh_vertex_expansion(x, W, normalized)
 % Performs optimal thresholding of the unconstrained set ratio for vertex
 % expansion
 %
@@ -20,41 +20,37 @@ function [clusters, vertex_exp] = opt_thresh_vertex_expansion(x,params,normalize
 % the Free Software Foundation, either version 3 of the License, or
 % (at your option) any later version.
 
-   
     % perform optimal thresholding of numerator
-    [RCk_sort,sort_ind]=thresholds_vertex_cut_fast(x,params);
+    [RCk_sort,sort_ind] = thresholds_vertex_cut_fast(x, W);
     
     % denominator
-    num=length(x);
+    num = length(x);
     
     if (normalized)
-        deg=full(sum(params.W));
-        deg=deg(sort_ind);
+        deg = full(sum(W));
+        deg = deg(sort_ind);
         
-        vol_compl=cumsum(deg);
-        vol=sum(deg)-vol_compl;
+        vol_compl = cumsum(deg);
+        vol = sum(deg)-vol_compl;
         
-        vol=vol(1:num-1);
-        vol_compl=vol_compl(1:num-1);
-        denom=min(vol,vol_compl)';
+        vol = vol(1:num-1);
+        vol_compl = vol_compl(1:num-1);
+        denom = min(vol,vol_compl)';
     else
-        card=num-1:-1:1;
-        card_compl=1:1:num-1;
-        denom=min(card,card_compl)';
+        card = num-1:-1:1;
+        card_compl = 1:1:num-1;
+        denom = min(card,card_compl)';
     end
     
-    
-     % remove first entry (corresponds to empty set)
-    RCk_sort=RCk_sort(2:end);
-    sort_ind=sort_ind(2:end);
-    
+    % remove first entry (corresponds to empty set)
+    RCk_sort = RCk_sort(2:end);
+    sort_ind = sort_ind(2:end);
     
     % find best objective
-    objective=RCk_sort./denom;
-    ix=find(objective==min(objective),1);
-    vertex_exp=objective(ix);
-    clusters=zeros(num,1);
-    clusters(sort_ind(ix:end))=1;
-      
+    objective = RCk_sort./denom;
+    ix = find(objective==min(objective),1);
+    vertex_exp = objective(ix);
+    clusters = zeros(num,1);
+    clusters(sort_ind(ix:end)) = 1;
 end
 
