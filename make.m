@@ -1,0 +1,3 @@
+mex -largeArrayDims mex_qp_bundle_level_Linf_fista.cpp
+mex -largeArrayDims mex_solve_inner_problem.cpp
+mex -largeArrayDims mex_thresholds_vertex_cut.cpp
