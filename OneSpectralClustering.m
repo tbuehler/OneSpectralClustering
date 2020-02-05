@@ -19,9 +19,7 @@ function [clusters,scores,eigvec,lambda] = OneSpectralClustering(W,criterion,k,n
 %                   'ncc' - Normalized Cheeger Cut,
 %                   'sve' - Symmetric Vertex Expansion,
 %                   'nve' - Normalized Vertex Expansion
-%   k           - number of clusters
-%
-% Input(optional):
+%   k           - Number of clusters.
 %   numRuns     - Number of additional times the multipartitioning scheme
 %                 is performed with random initializations (default is 10). 
 %   verbosity   - Controls how much information is displayed. 
@@ -41,17 +39,13 @@ function [clusters,scores,eigvec,lambda] = OneSpectralClustering(W,criterion,k,n
 % values of the optimization criterion are the last elements in the 
 % corresponding vector in the scores struct, e.g. for rcut: scores.rcut(end).
 %
-% If more flexibility is desired (e.g. turn off second eigenvector 
-% initialization, uncouple multicut-criterion from thresholding criterion), 
-% call the subroutine computeMultiPartitioning directly. 
-%
 %
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation, either version 3 of the License, or
 % (at your option) any later version.
 % 
-% (C)2010-18 Thomas Buehler and Matthias Hein
+% (C)2010-2020 Thomas Buehler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
@@ -67,17 +61,17 @@ function [clusters,scores,eigvec,lambda] = OneSpectralClustering(W,criterion,k,n
     criterion = lower(criterion);
     switch(criterion)
         case 'rcut'    
-            criterion_inner = 1; normalized = false;
+            crit = 1; normalized = false;
         case 'ncut'    
-            criterion_inner = 1; normalized = true;
+            crit = 1; normalized = true;
         case 'rcc'     
-            criterion_inner = 2; normalized = false;
+            crit = 2; normalized = false;
         case 'ncc'     
-            criterion_inner = 2; normalized = true;
+            crit = 2; normalized = true;
         case 'sve'     
-            criterion_inner = 3; normalized = false;
+            crit = 3; normalized = false;
         case 'nve'     
-            criterion_inner = 3; normalized = true;
+            crit = 3; normalized = true;
         otherwise
             error('Wrong usage. Unknown clustering criterion. Available clustering criteria are Ncut/NCC/Rcut/RCC.');
     end
@@ -89,42 +83,38 @@ function [clusters,scores,eigvec,lambda] = OneSpectralClustering(W,criterion,k,n
     if (verbosity>=1)
         fprintf('Optimization criterion: %s\n', fullnames(criterion));
         fprintf('Number of clusters: %d\n', k);
-        if (criterion_inner<3)
+        if (crit<3)
             tempstring = 'Number of runs: 1 (second eigenvector initialization)';
         else
             assert(numRuns>0, "Number of runs has to be positive");
             tempstring = 'Number of runs: ';
         end
         if (numRuns>0)
-            fprintf(strcat(tempstring, sprintf(' %d (random initialization)', numRuns)));
+            tempstring = strcat(tempstring, sprintf(' %d (random initialization)', numRuns));
         end
-        fprintf('\n');
+        disp(tempstring);
     end
 
-    if (criterion_inner<3)
-        if (verbosity>=3 && numRuns>0) fprintf('Starting run with second eigenvector initialization.\n'); end;
-        
+    scores = setfield(struct, criterion, inf);
+    if (crit<3)
+        if (verbosity>=3 && numRuns>0)
+            fprintf('... Starting run with second eigenvector initialization.\n');
+        end
         try
-            [clusters,cuts,cheegers,eigvec,lambda] = computeMultiPartitioning(W,normalized,k,true,0,criterion_inner,criterion_inner,verbosity);
-
+            [clusters, scores, eigvec, lambda] = computeMultiPartitioning(W, normalized, k, true, crit, verbosity);
             if (verbosity >=2)
-                fprintf('Result (eigenvector): %s', displayCurrentObjective(cuts(end), cheegers(end), normalized, criterion_inner));
+                fprintf('Result (eigenvector):  %s', displayScores(scores, fullnames));
             end
         catch exc
-            %disp(exc.identifier);
             if (strcmp(exc.identifier,'OneSpect:cutinf'))
                 if (numRuns>0)
-                    cuts = inf;
-                    cheegers = inf;
-                    fprintf(strcat('WARNING!\t',exc.message,'\n'));
+                    fprintf(strcat('WARNING!\t', exc.message, '\n'));
                     fprintf('Proceeding with run with random initializations.\n\n');
                 else
-                    cuts = inf;
-                    cheegers = inf;
                     clusters = NaN(size(W,1),1);
                     eigvec = NaN(size(W,1),1);
                     lambda = NaN;
-                    fprintf(strcat('ERROR!\t',exc.message,'\n'));
+                    fprintf(strcat('ERROR!\t', exc.message, '\n'));
                     fprintf('Rerun with additional random initializations.\n');
                     return;
                 end
@@ -132,65 +122,42 @@ function [clusters,scores,eigvec,lambda] = OneSpectralClustering(W,criterion,k,n
                 rethrow(exc);
             end
         end
-    else
-        cuts = inf;
-        cheegers = inf;
     end
 
     for l=1:numRuns
-        if (verbosity>=3) fprintf('Starting run with random initialization %d of %d.\n',l,numRuns); end;
-        
-        [clusters_temp,cuts_temp,cheegers_temp,eigvec_temp,lambda_temp] = computeMultiPartitioning(W,normalized,k,false,1,criterion_inner,criterion_inner,verbosity);
-
-        if (verbosity >=2)
-            fprintf('Result (random %d of %d): %s', l, numRuns, displayCurrentObjective(cuts_temp(end), cheegers_temp(end), normalized, criterion_inner));
+        if (verbosity>=3)
+            fprintf('... Starting run with random initialization %d of %d.\n', l, numRuns);
+        end
+        [clusters_temp, scores_temp, eigvec_temp, lambda_temp] = computeMultiPartitioning( ...
+                                                                 W, normalized, k, false, crit, verbosity);
+        if (verbosity>=2)
+            fprintf('Result (random %d of %d):  %s', l, numRuns, displayScores(scores_temp, fullnames));
         end
 
-        % for the eigenvector and eigenvalue, we have to look at the first
-        % partition
-        if ((criterion_inner==1 && cuts_temp(1)<cuts(1)) || (criterion_inner==2 && cheegers_temp(1)<cheegers(1)) || (criterion_inner==3 && cheegers_temp(1)<cheegers(1)))
-            [eigvec,lambda] = deal(eigvec_temp,lambda_temp);
+        % for the eigenvector and eigenvalue, we have to look at the first partition
+        if (getfield(scores_temp, criterion, {1}) < getfield(scores, criterion, {1}))
+            [eigvec, lambda] = deal(eigvec_temp, lambda_temp);
         end
-        % if the final cut/cheeger cut is better according to the given
-        % criterion, take this partition
-        if ((criterion_inner==1 && cuts_temp(end)<cuts(end)) || (criterion_inner==2 && cheegers_temp(end)<cheegers(end)) || (criterion_inner==3 && cheegers_temp(end)<cheegers(end)))
-            [clusters,cuts,cheegers] = deal(clusters_temp,cuts_temp,cheegers_temp);
+        % for the cut/cheeger cut/vertex expansion, we look at the last partition
+        if (getfield(scores_temp, criterion, {k-1}) < getfield(scores, criterion, {k-1}))
+            [clusters, scores] = deal(clusters_temp, scores_temp);
         end
     end
 
     if (verbosity >=1)
-        fprintf('Best result: %s', displayCurrentObjective(cuts(end), cheegers(end), normalized, criterion_inner));
-    end
-
-    if (criterion_inner<3)
-        if (normalized)
-            scores = struct('ncut', cuts, 'ncc', cheegers);
-        else
-            scores = struct('rcut', cuts, 'rcc', cheegers);
-        end
-    else
-        if (normalized)
-            scores = struct('nve', cuts);
-        else
-            scores = struct('sve', cuts);
-        end
+        fprintf('Best result:  %s', displayScores(scores, fullnames))
     end
 end
     
 
 % Displays the current objective value
-function objective = displayCurrentObjective(cut_temp,cheeger_temp,normalized, criterion_inner)
-    if (criterion_inner<3)
-        if (normalized)
-            objective = sprintf('Normalized Cut: %.8g - Normalized Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
-        else
-            objective = sprintf('Ratio Cut: %.8g - Ratio Cheeger Cut: %.8g\n',cut_temp,cheeger_temp); 
-        end
-    else
-        if (normalized)
-            objective = sprintf('Normalized Vertex Expansion: %.8g\n', cut_temp); 
-        else
-            objective = sprintf('Symmetric Vertex Expansion: %.8g\n', cut_temp); 
-        end
+function objective = displayScores(scores, fullnames)
+    score_fields = fieldnames(scores);
+    objective = '';    
+    for i=1:length(score_fields)
+        crit = score_fields{i};
+        values = getfield(scores, crit);
+        objective = sprintf('%s%s: %.8g  ', objective, fullnames(crit), values(end));
     end
+    objective = sprintf('%s \n', objective);
 end          
