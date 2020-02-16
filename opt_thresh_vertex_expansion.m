@@ -21,7 +21,11 @@ function [clusters, vertex_exp] = opt_thresh_vertex_expansion(x, W, normalized)
 % (at your option) any later version.
 
     % perform optimal thresholding of numerator
-    [RCk_sort,sort_ind] = thresholds_vertex_cut_fast(x, W);
+    [~,sort_ind] = sort(x);
+    Wsort = W(sort_ind,sort_ind);
+    Wtril = tril(Wsort,-1);
+    Wtriu = triu(Wsort,1);
+    RCk_sort = mex_thresholds_vertex_cut(Wtril,Wtriu);
     
     % denominator
     num = length(x);
