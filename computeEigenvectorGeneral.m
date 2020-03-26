@@ -142,7 +142,7 @@ function [fnew, subgrad_new, FctValNew, counter, diffFunction, alphaold, maxiter
         eps1 = 1E-3;
         obj_subg = @(x,params) (obj_subg_vertex_exp(x,params));
         % [f_new, Obj, niter] = ip_cutting_plane(start, params, eps1, 'linprog', obj_subg);
-        [f_new, Obj, niter] = ip_bundle_level(start, params, eps1, 'linprog', 'fista_mex', verbose, obj_subg);
+        [fnew, Obj, niter] = ip_bundle_level(start, params, eps1, 'linprog', 'fista_mex', verbose, obj_subg);
     else
         epsilon = 1E-14; 
         [fnew, alphaold, Obj, niter] = mex_solve_inner_problem(W2, FctValOld*full(subgrad_old), ...
