@@ -1,6 +1,11 @@
 function [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,verbose,deg)
-% Computes a nonconstant eigenvector of the 1-Laplacian using the 
-% nonlinear inverse power method.
+% Computes a nonconstant nonlinear eigenvector using the inverse power method
+% (IPM) for nonlinear eigenproblems, as described in the paper
+%
+% M. Hein and T. Bühler
+% An Inverse Power Method for Nonlinear Eigenproblems with Applications in 1-Spectral Clustering and Sparse PCA
+% In Advances in Neural Information Processing Systems 23 (NIPS 2010)
+% Available online at http://arxiv.org/abs/1012.0774
 %
 % Usage:
 %   [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,verbose,deg)
@@ -26,7 +31,7 @@ function [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,
 % the Free Software Foundation, either version 3 of the License, or
 % (at your option) any later version.
 %
-% Copyright 2010-18 Thomas Bühler and Matthias Hein
+% Copyright 2010-2020 Thomas Bühler and Matthias Hein
 % Machine Learning Group, Saarland University, Germany
 % http://www.ml.uni-saarland.de
 
@@ -51,25 +56,26 @@ function [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,
     counter = 0;
     fold = start;
     fold = performCentering(fold, normalized, deg);
-    if (crit==3); fold = fold/norm(fold,1); end;
+    if (crit==3); fold = fold/norm(fold,1); end
     [FctValOld, subgrad_old] = evaluateFunctional(fold, wval, ix, jx, normalized, deg, crit, W);
-    FctValSeq = [FctValOld];
+    FctValSeq = FctValOld;
     FctValRatio = 0.0;
 
     W2 = triu(W,1);         % diagonal part plays no role in inner problem
     L = 2*max(sum(W.^2));   % upper bound on Lipschitz constant
-    alphaold = zeros(length(ix),1); 
+    alphaold = zeros(nnz(W2),1); 
 
     % print value of outer objective and cut values at starting point
     if(verbose)
         if (crit<3)
-            [ac, cut, cheeger] = createClustersGeneral(fold, W, normalized, -1, crit, deg);
+            [~, cut, cheeger] = createClustersGeneral(fold, W, normalized, -1, crit, deg);
+            fprintf('......... Init - Functional: %.14g - CutBest: %.14g - CheegerBest: %.14g\n', ...
+                    FctValOld, cut, cheeger);
         else 
-            [ac, cheeger] = opt_thresh_vertex_expansion(fold, W, normalized);
-            cut = cheeger;
+            [~, vertex_exp] = opt_thresh_vertex_expansion(fold, W, normalized);
+            fprintf('......... Init - Functional: %.14g - Vertex Expansion: %.14g\n', ...
+                    FctValOld, vertex_exp);
         end
-        fprintf('......... Init - Functional: %.14g - CutBest: %.14g - CheegerBest: %.14g\n', ...
-                FctValOld, cut, cheeger);
     end
 
     maxiter_inner = 40;     % number of inner iterations in first try
@@ -97,26 +103,28 @@ function [eigvec,FctValSeq] = computeEigenvectorGeneral(W,start,normalized,crit,
         % print value of outer objective and current cut values
         if (verbose)
             if (crit<3)
-                [ac,cut,cheeger] = createClustersGeneral(fold,W,normalized,-1,crit,deg);
+                [~, cut, cheeger] = createClustersGeneral(fold,W,normalized,-1,crit,deg);
+                fprintf('......... Iter: %d - Functional: %.14g - CutBest: %.14g - CheegerBest: %.14g - DiffF: %.14g\n', ...
+                        counter, FctValOld, cut, cheeger, diffFunction);
             else 
-                [ac, cheeger] = opt_thresh_vertex_expansion(fold, W, normalized);
-                cut = cheeger;
+                [~, vertex_exp] = opt_thresh_vertex_expansion(fold, W, normalized);
+                fprintf('......... Iter: %d - Functional: %.14g - Vertex Expansion: %.14g - DiffF: %.14g\n', ...
+                        counter, FctValOld, vertex_exp, diffFunction);
             end
-            fprintf('......... Iter: %d - Functional: %.14g - CutBest: %.14g - CheegerBest: %.14g - DiffF: %.14g\n', ...
-                    counter, FctValOld, cut, cheeger, diffFunction);
         end
     end
 
    % print final objective
    if(verbose)
        if (crit<3)
-           [ac, cut, cheeger] = createClustersGeneral(fold, W, normalized, -1, crit, deg);
+           [~, cut, cheeger] = createClustersGeneral(fold, W, normalized, -1, crit, deg);
+           fprintf('......... Final result: Functional: %.16g  - Cut: %.14g - Cheeger Cut : %.14g \n', ...
+                   FctValOld, cut, cheeger);
        else 
-           [ac, cheeger] = opt_thresh_vertex_expansion(fold, W, normalized);
-           cut = cheeger;
+           [~, vertex_exp] = opt_thresh_vertex_expansion(fold, W, normalized);
+           fprintf('......... Final result: Functional: %.16g  - Vertex Expansion: %.14g \n', ...
+                   FctValOld, vertex_exp);
        end
-       fprintf('......... Final result: Functional: %.16g  - Cut: %.14g - Cheeger Cut : %.14g \n', ...
-               FctValOld, cut, cheeger);
    end
    eigvec = fold;
 end
@@ -133,10 +141,10 @@ function [fnew, subgrad_new, FctValNew, counter, diffFunction, alphaold, maxiter
         params.W = W;
         eps1 = 1E-3;
         obj_subg = @(x,params) (obj_subg_vertex_exp(x,params));
-        [fnew, Obj, it, toc1] = ip_bundle(start, params, eps1, 'bundle_level', verbose, obj_subg);
+        % [f_new, Obj, niter] = ip_cutting_plane(start, params, eps1, 'linprog', obj_subg);
+        [f_new, Obj, niter] = ip_bundle_level(start, params, eps1, 'linprog', 'fista_mex', verbose, obj_subg);
     else
         epsilon = 1E-14; 
-        % solve inner problem
         [fnew, alphaold, Obj, niter] = mex_solve_inner_problem(W2, FctValOld*full(subgrad_old), ...
                                                      FctValRatio*alphaold, maxiter_inner, epsilon, L);
     end
@@ -151,12 +159,8 @@ function [fnew, subgrad_new, FctValNew, counter, diffFunction, alphaold, maxiter
 
     % print value of inner objective 
     if(verbose)
-        if (crit==3)
-           fprintf('......... Inner Problem - Final Obj: %.14g - time: %.14g - it: %d\n', ...
-                   Obj, toc1, it);
-        else
-            fprintf('......... Inner Problem - Final Obj: %.16g  - Number of Iterations: %d \n', ...
-                    Obj, niter);
+        fprintf('......... Inner Problem - Final Obj: %.14g - Number of Iterations: %d\n', Obj, niter);
+        if (crit<3)
             f3 = fnew/norm(fnew); 
             sval3 = wval.*abs(f3(ix)-f3(jx)); 
             Obj2 = 0.5*sum(sval3)-FctValOld*subgrad_old'*f3;
@@ -175,8 +179,8 @@ function [fnew, subgrad_new, FctValNew, counter, diffFunction, alphaold, maxiter
 
     if (crit<3)
         % update bounds for maximum inner iterations
-        [maxiter_bound, maxiter_inner] = update_maxiter(FctValNew,FctValOld, maxiter_bound, ...
-                                                    maxiter_inner,counter, verbose);
+        [maxiter_bound, maxiter_inner] = update_maxiter(FctValNew, FctValOld, maxiter_bound, ...
+                                                        maxiter_inner, counter, verbose);
         if (maxiter_inner>maxiter_bound)
             counter = maxiter;
             if (verbose)
@@ -199,11 +203,11 @@ function [maxiter_bound, maxiter_inner] = update_maxiter(FctValNew, FctValOld, m
         end
         maxiter_inner = min(maxiter_inner,maxiter_bound);  
     else
-        if(verbose)
-            fprintf('......... Functional has not decreased. Old: %.14g - New: %.14g. Increasing number of inner iterations.\n', ...
-                    FctValOld, FctValNew);
-        end
         maxiter_inner = maxiter_inner*2;
+        if(verbose)
+            fprintf('......... Functional has not decreased. Old: %.14g - New: %.14g. Setting inner iterations to %d.\n', ...
+                    FctValOld, FctValNew, maxiter_inner);
+        end
     end
 end
 
@@ -221,22 +225,23 @@ function [FctVal, subgrad] = evaluateFunctional(f, wval, ix, jx, normalized, deg
     if (crit<3)
         sval = wval.*abs(f(ix)-f(jx));
         subgrad = computeSubGradient(f, normalized, deg, crit);
-        R = 0.5*sum(sval);
+        FctVal = 0.5*sum(sval) / (f'*subgrad);
     else
         num = length(f);
-        [RCk_sort,sort_ind] = thresholds_vertex_cut_fast(f, W);
+        [~,sort_ind] = sort(f);
+        Wsort = W(sort_ind,sort_ind);
+        Wtril = tril(Wsort,-1);
+        Wtriu = triu(Wsort,1);
+        RCk_sort = mex_thresholds_vertex_cut(Wtril,Wtriu);
         RCk_sort_shift = [RCk_sort(2:end); 0];
-
         subg = zeros(num,1);
         subg(sort_ind) = RCk_sort-RCk_sort_shift;
-
-        R = subg'*f;
         subgrad = computeSubGradient(f, normalized, deg, 2);
-    end
-    if (~normalized)
-        FctVal = R/norm(f,1);
-    else
-        FctVal = R/(deg'*abs(f));
+        if (~normalized)
+           FctVal = (subg'*f)/norm(f,1);
+        else
+           FctVal = (subg'*f)/(deg'*abs(f));
+        end
     end
 end
 
@@ -246,14 +251,14 @@ function subgrad = computeSubGradient(fold, normalized, deg, crit)
     if (crit==1) 
         % compute the subgradient associated with NCut/Rcut problem
         if (normalized)
-            [fsort, ind] = sort(fold);
+            [~, ind] = sort(fold);
             VolV = sum(deg);
             deg_sort = deg(ind);
             vec = zeros(size(fold,1),1);
             vec(ind) = deg_sort.*(2 * cumsum(deg_sort) - VolV - deg_sort);
             subgrad = vec/VolV;
         else
-            [fsort, ind] = sort(fold);
+            [~, ind] = sort(fold);
             num = size(fold,1);
             vec = zeros(num,1);
             vec(ind) = 2*(1:num)-num-1;

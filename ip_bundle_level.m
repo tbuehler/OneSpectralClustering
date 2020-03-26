@@ -144,12 +144,12 @@ function [x_lb, lb_new] = solve_LP(A, dim, solver_lp, debug)
                     opts.Display = 'iter';
                 end
                 opts.Algorithm = 'interior-point';
-                [f, lb_new, exitflag, output, lambda1] = linprog( ...
+                [f, lb_new, exitflag, ~, ~] = linprog( ...
                     [zeros(dim,1); 1], [A -ones(size(A,1),1)], zeros(size(A,1),1), ...
                     [], [], [-ones(dim,1);-inf], [ones(dim,1);inf], [], opts);
                 if (exitflag<=0)
                     opts.Algorithm = 'dual-simplex';
-                    [f, lb_new, exitflag, output, lambda1] = linprog( ...
+                    [f, lb_new, ~, ~, ~] = linprog( ...
                         [zeros(dim,1); 1], [A -ones(size(A,1),1)], zeros(size(A,1),1), ...
                         [], [], [-ones(dim,1);-inf], [ones(dim,1);inf], [], opts);
                 end                
@@ -203,15 +203,10 @@ function [x_new, obj_qp, alpha] = solve_QP(A, x, dim, lev, solver_qp, alpha_star
                                       [], [], -ones(dim,1), ones(dim,1), [], opts);
             obj_qp = 0.5*resnorm;
             warning('on','all');
-        case 'fista_matlab'
-            At = A';
-            L = norm(A,'fro')^2;    
-            [v_proj, primal_obj, dual_obj, alpha, num_it] = qp_bundle_level_Linf_fista(...
-                                                x, A, At, lev, eps1, L, alpha_start);
         case 'fista_mex'
             At = A';
             L = norm(A,'fro')^2;
-            [v_proj2, primal_obj2, dual_obj2, alpha, it2, x_new, obj_qp] = mex_qp_bundle_level_Linf_fista(x, A, At, lev, eps1, L, alpha_start);
+            [alpha, x_new, obj_qp] = mex_qp_bundle_level_Linf_fista(x, A, At, lev, eps1, L, alpha_start);
         otherwise
             error("Invalid solver for QP");        
     end
