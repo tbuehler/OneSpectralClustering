@@ -65,16 +65,16 @@ corresponding vector in the scores struct, e.g. for rcut: scores.rcut(end).
 
 ## References
 
-    M. Hein and T. Buehler.
-    An Inverse Power Method for Nonlinear Eigenproblems with Applications 
-    in 1-Spectral Clustering and Sparse PCA.
-    In Advances in Neural Information Processing Systems 23 (NIPS 2010).
-    Extended version available online at http://arxiv.org/abs/1012.0774. 
+M. Hein and T. Buehler.
+*An Inverse Power Method for Nonlinear Eigenproblems with Applications 
+in 1-Spectral Clustering and Sparse PCA.* 
+In Advances in Neural Information Processing Systems 23 (NIPS 2010). 
+Extended version available online at http://arxiv.org/abs/1012.0774. 
 
-    T. Bühler. 
-    A flexible framework for solving constrained ratio problems in machine learning. 
-    Ph.D. Thesis, Saarland University, 2015. 
-    Available at http://scidok.sulb.uni-saarland.de/volltexte/2015/6159/.	
+T. Bühler. 
+*A flexible framework for solving constrained ratio problems in machine learning.* 
+Ph.D. Thesis, Saarland University, 2015. 
+http://dx.doi.org/10.22028/D291-26604. 	
 
 
  
