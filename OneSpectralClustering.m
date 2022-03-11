@@ -73,7 +73,8 @@ function [clusters,scores,eigvec,lambda] = OneSpectralClustering(W,criterion,k,n
         case 'nve'     
             crit = 3; normalized = true;
         otherwise
-            error('Wrong usage. Unknown clustering criterion. Available clustering criteria are Ncut/NCC/Rcut/RCC.');
+            error(strcat('Wrong usage. Unknown clustering criterion.', ...
+                  ' Available clustering criteria are RCut/NCut/RCC/NCC/SVE/NVE.'));
     end
 
     fullnames = containers.Map({'rcut', 'ncut', 'rcc', 'ncc', 'sve', 'nve'}, ...
